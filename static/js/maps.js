@@ -6,17 +6,31 @@ let isProcessing = false;
 let mapBounds;
 
 function initMap() {
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) {
+        console.error('Map container not found');
+        return;
+    }
+    
     try {
         const mapOptions = {
             center: { lat: 46.8182, lng: 8.2275 }, // Switzerland center
-            zoom: 8  // Adjusted for country-level view
+            zoom: 8,
+            mapId: 'DEMO_MAP_ID'
         };
-        map = new google.maps.Map(document.getElementById('map'), mapOptions);
+        
+        map = new google.maps.Map(mapContainer, mapOptions);
+        
+        // Initialize services after map is created
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer({
             map: map,
             suppressMarkers: true
         });
+        
+        // Add a visual check for map loading
+        mapContainer.style.border = '1px solid #ccc';
+        
     } catch (error) {
         console.error('Error initializing map:', error);
         showMapError();

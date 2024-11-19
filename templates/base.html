@@ -10,6 +10,8 @@
         #map {
             min-height: 400px;
             height: calc(100vh - 300px);
+            border-radius: 0.375rem;
+            overflow: hidden;
         }
         .tooltip {
             position: absolute;
@@ -61,13 +63,9 @@
             z-index: 1090;
         }
     </style>
-    <script>
-        function initMap() {
-            // Will be implemented in maps.js
-        }
-    </script>
-    <script async
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places,marker&callback=initMap">
+    <!-- Remove the existing script tag with initMap -->
+    <script defer
+      src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places,marker&callback=initMap">
     </script>
 </head>
 <body>
