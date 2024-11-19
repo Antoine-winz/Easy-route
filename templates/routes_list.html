@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Saved Routes</h2>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Route Name</th>
+                        <th>Created</th>
+                        <th>Addresses</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for route in routes %}
+                    <tr>
+                        <td>{{ route.name }}</td>
+                        <td>{{ route.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ route.addresses|length }} stops</td>
+                        <td>
+                            <a href="{{ url_for('view_route', route_id=route.id) }}" class="btn btn-info btn-sm">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            <a href="{{ url_for('export_route', route_id=route.id) }}" class="btn btn-success btn-sm">
+                                <i class="fas fa-download"></i> Export
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
