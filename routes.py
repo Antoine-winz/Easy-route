@@ -112,6 +112,7 @@ def optimize_route():
         addresses = data.get('addresses', [])
         has_end_point = data.get('has_end_point', False)
         end_point = data.get('end_point')
+        is_loop_route = data.get('is_loop_route', False)
         route_name = data.get('name', f"Route {datetime.utcnow()}")
         route_description = data.get('description', '')
         
@@ -123,15 +124,20 @@ def optimize_route():
                 'error': 'At least two addresses are required'
             }), 400
 
-        if has_end_point and not end_point:
+        # Handle loop route
+        if is_loop_route:
+            has_end_point = False  # Override end point if loop route
+            end_point = addresses[0]  # Use start point as end point
+        elif has_end_point and not end_point:
             return jsonify({
                 'success': False,
                 'error': 'End point is required when has_end_point is true'
             }), 400
 
-        # If end point is specified, add it to addresses
-        if has_end_point and end_point:
-            addresses.append(end_point)
+        # If end point is specified or it's a loop route, add it to addresses
+        if (has_end_point and end_point) or is_loop_route:
+            if end_point not in addresses:  # Only add if not already present
+                addresses.append(end_point)
 
         # Store initial route in database
         try:
@@ -191,7 +197,7 @@ def optimize_route():
             
             # Calculate optimal route
             app.logger.info("Calculating optimal route")
-            optimal_route_indices = nearest_neighbor(distance_matrix, has_end_point)
+            optimal_route_indices = nearest_neighbor(distance_matrix, has_end_point or is_loop_route)
             optimized_addresses = [geocoded_addresses[i] for i in optimal_route_indices]
             app.logger.info("Route optimization complete")
             

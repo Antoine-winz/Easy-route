@@ -48,6 +48,21 @@ function hideLoadingOverlay() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize loop route checkbox handler
+    document.getElementById('isLoopRoute').addEventListener('change', function() {
+        const endPointSection = document.getElementById('endPointSection');
+        const endPointInput = document.getElementById('endPointInput');
+        const hasEndPoint = document.getElementById('hasEndPoint');
+        
+        if (this.checked) {
+            endPointSection.style.display = 'none';
+            endPointInput.style.display = 'none';
+            hasEndPoint.checked = false;
+        } else {
+            endPointSection.style.display = 'block';
+        }
+    });
+
     // Initialize end point checkbox handler
     document.getElementById('hasEndPoint').addEventListener('change', function() {
         const endPointInput = document.getElementById('endPointInput');
@@ -122,7 +137,9 @@ document.getElementById('clearForm').addEventListener('click', () => {
         document.getElementById('routeName').value = '';
         document.getElementById('routeDescription').value = '';
         document.getElementById('hasEndPoint').checked = false;
+        document.getElementById('isLoopRoute').checked = false;
         document.getElementById('endPointInput').style.display = 'none';
+        document.getElementById('endPointSection').style.display = 'block';
         document.getElementById('endPointInput').querySelector('.address-input').value = '';
         
         const addressInputs = document.getElementById('addressInputs');
@@ -155,13 +172,14 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
     const spinner = optimizeButton.querySelector('.spinner-border');
     
     // Get addresses including end point if specified
-    const hasEndPoint = document.getElementById('hasEndPoint').checked;
+    const isLoopRoute = document.getElementById('isLoopRoute').checked;
+    const hasEndPoint = document.getElementById('hasEndPoint').checked && !isLoopRoute;
     const endPointInput = document.getElementById('endPointInput').querySelector('.address-input');
     let addresses = Array.from(document.getElementById('addressInputs').getElementsByClassName('address-input'))
         .map(input => input.value)
         .filter(address => address.trim() !== '');
     
-    if (addresses.length < 2 && !hasEndPoint) {
+    if (addresses.length < 2 && !hasEndPoint && !isLoopRoute) {
         showErrorAlert('Please enter at least 2 addresses');
         return;
     }
@@ -191,6 +209,7 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
                 addresses,
                 has_end_point: hasEndPoint,
                 end_point: hasEndPoint ? endPointInput.value.trim() : null,
+                is_loop_route: isLoopRoute,
                 name: routeName,
                 description: routeDescription
             })
@@ -225,15 +244,21 @@ function updateOptimizedRouteList(addresses) {
     routeList.innerHTML = '';
     
     addresses.forEach((address, index) => {
+        const isStart = index === 0;
+        const isEnd = index === addresses.length - 1;
+        const isLoop = address === addresses[0] && isEnd && !isStart;
+        
         const li = document.createElement('li');
         li.className = 'list-group-item d-flex justify-content-between align-items-center';
         li.innerHTML = `
             <span>${address}</span>
-            <span class="badge bg-${index === 0 ? 'primary' : 
-                                   index === addresses.length - 1 ? 'success' : 
+            <span class="badge bg-${isStart ? 'primary' : 
+                                   isLoop ? 'primary' :
+                                   isEnd ? 'success' : 
                                    'secondary'} rounded-pill">
-                ${index === 0 ? 'Start' : 
-                  index === addresses.length - 1 ? 'End' : 
+                ${isStart ? 'Start' : 
+                  isLoop ? 'Return to Start' :
+                  isEnd ? 'End' : 
                   'Stop ' + index}
             </span>
         `;
