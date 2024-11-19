@@ -15,10 +15,11 @@
             border-bottom: 1px solid #dee2e6;
         }
         #map {
-            min-height: 400px;
-            height: calc(100vh - 300px);
+            height: 600px;
+            width: 100%;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
             border-radius: 0.375rem;
-            overflow: hidden;
         }
         .tooltip {
             position: absolute;
@@ -70,12 +71,19 @@
             z-index: 1090;
         }
     </style>
+    <!-- Initialize empty function for async callback -->
+    <script>
+        function initMap() {} // Empty callback function
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places,marker&callback=initMap">
+    </script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="{{ url_for('static', filename='images/NECTRA-food-sa_logo.jpg') }}"
+                <img src="{{ url_for('static', filename='images/nectra-placeholder-logo.svg') }}"
                      alt="NECTRA Food SA"
                      height="40"
                      class="me-2">
@@ -124,17 +132,5 @@
         });
     </script>
     {% block scripts %}{% endblock %}
-
-    <!-- Initialize empty function for async callback -->
-    <script>
-        function initMap() {
-            // Empty function to be overridden
-        }
-    </script>
-    <!-- Load Google Maps API with defer -->
-    <script
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places,marker&callback=initMap"
-        defer
-    ></script>
 </body>
 </html>
