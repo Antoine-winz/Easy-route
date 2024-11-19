@@ -3,6 +3,7 @@ let markers = [];
 let directionsService;
 let directionsRenderer;
 let isProcessing = false;
+let mapBounds;
 
 function initMap() {
     try {
@@ -13,20 +14,61 @@ function initMap() {
         const mapOptions = {
             center: { lat: 40.7128, lng: -74.0060 },
             zoom: 13,
-            mapId: 'DEMO_MAP_ID' // This enables Advanced Markers
+            mapId: 'DEMO_MAP_ID',
+            styles: [
+                {
+                    featureType: "all",
+                    elementType: "labels.text.fill",
+                    stylers: [{ color: "#ffffff" }]
+                }
+            ]
         };
 
         map = new google.maps.Map(document.getElementById('map'), mapOptions);
+        mapBounds = new google.maps.LatLngBounds();
         
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer({
             map: map,
-            suppressMarkers: true
+            suppressMarkers: true,
+            polylineOptions: {
+                strokeColor: "#1a73e8",
+                strokeOpacity: 0.8,
+                strokeWeight: 5
+            }
         });
+
+        // Add map controls
+        const zoomControl = document.createElement("div");
+        zoomControl.className = "map-control";
+        const zoomInButton = createMapButton("Zoom In", "fas fa-plus");
+        const zoomOutButton = createMapButton("Zoom Out", "fas fa-minus");
+        
+        zoomInButton.addEventListener("click", () => {
+            map.setZoom(map.getZoom() + 1);
+        });
+        zoomOutButton.addEventListener("click", () => {
+            map.setZoom(map.getZoom() - 1);
+        });
+
+        zoomControl.appendChild(zoomInButton);
+        zoomControl.appendChild(zoomOutButton);
+        map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(zoomControl);
+
     } catch (error) {
         console.error('Error initializing map:', error);
         showMapError();
     }
+}
+
+function createMapButton(title, iconClass) {
+    const button = document.createElement("button");
+    button.className = "btn btn-dark btn-sm m-2";
+    button.setAttribute("title", title);
+    const icon = document.createElement("i");
+    icon.className = iconClass;
+    button.appendChild(icon);
+    return button;
 }
 
 function showMapError() {
@@ -45,22 +87,46 @@ function showMapError() {
     `;
 }
 
-async function addMarker(location, label) {
+async function addMarker(location, label, isStart = false, isEnd = false) {
     if (!map) return;
     
     try {
-        // Create a marker
+        let pinColor;
+        let scale;
+        
+        if (isStart) {
+            pinColor = "#28a745"; // Green for start
+            scale = 1.2;
+        } else if (isEnd) {
+            pinColor = "#dc3545"; // Red for end
+            scale = 1.2;
+        } else {
+            pinColor = "#1a73e8"; // Blue for waypoints
+            scale = 1;
+        }
+
         const marker = new google.maps.marker.AdvancedMarkerElement({
             map,
             position: location,
-            title: `Stop ${label}`,
+            title: isStart ? "Start" : (isEnd ? "End" : `Stop ${label}`),
             content: new google.maps.marker.PinElement({
                 glyph: label.toString(),
                 glyphColor: "#ffffff",
-                background: "#1a73e8"
+                background: pinColor,
+                scale: scale,
+                borderColor: "#ffffff"
             }).element
         });
+
+        // Add tooltip
+        const tooltip = new bootstrap.Tooltip(marker.element, {
+            title: marker.title,
+            placement: 'top'
+        });
+
         markers.push(marker);
+        mapBounds.extend(location);
+        map.fitBounds(mapBounds);
     } catch (error) {
         console.error('Error creating marker:', error);
     }
@@ -68,13 +134,19 @@ async function addMarker(location, label) {
 
 function clearMarkers() {
     markers.forEach(marker => {
-        if (marker && marker.setMap) {
-            marker.setMap(null);
+        if (marker) {
+            if (marker.setMap) marker.setMap(null);
+            // Cleanup any tooltips
+            const tooltip = bootstrap.Tooltip.getInstance(marker.element);
+            if (tooltip) tooltip.dispose();
         }
     });
     markers = [];
     if (directionsRenderer) {
         directionsRenderer.setDirections({routes: []});
+    }
+    if (mapBounds) {
+        mapBounds = new google.maps.LatLngBounds();
     }
 }
 
@@ -100,8 +172,8 @@ function updateRouteInfo(totalDistance, totalDuration) {
     const totalDistanceElement = document.getElementById('totalDistance');
     const totalDurationElement = document.getElementById('totalDuration');
     
-    totalDistanceElement.textContent = `Total Distance: ${formatDistance(totalDistance)}`;
-    totalDurationElement.textContent = `Estimated Time: ${formatDuration(totalDuration)}`;
+    totalDistanceElement.innerHTML = `<i class="fas fa-road"></i> Total Distance: ${formatDistance(totalDistance)}`;
+    totalDurationElement.innerHTML = `<i class="fas fa-clock"></i> Estimated Time: ${formatDuration(totalDuration)}`;
     routeInfo.style.display = 'block';
 }
 
@@ -120,7 +192,12 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
                     else reject(new Error(`Geocoding failed: ${status}`));
                 });
             });
-            await addMarker(result, i + 1);
+            await addMarker(
+                result, 
+                i + 1, 
+                i === 0, // isStart
+                i === addresses.length - 1 // isEnd
+            );
         } catch (error) {
             console.error(`Error creating marker for address ${i + 1}:`, error);
             continue;
@@ -150,6 +227,7 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
         });
 
         directionsRenderer.setDirections(response);
+        map.fitBounds(mapBounds);
 
         // Update route information if provided
         if (totalDistance !== null && totalDuration !== null) {
@@ -157,6 +235,6 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
         }
     } catch (error) {
         console.error('Error displaying route:', error);
-        alert('Failed to calculate route. Please check the addresses and try again.');
+        showErrorAlert('Failed to calculate route. Please check the addresses and try again.');
     }
 }
