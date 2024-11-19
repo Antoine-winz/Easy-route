@@ -1,4 +1,5 @@
 let currentRouteId = null;
+let isOptimizing = false;
 
 document.getElementById('addAddress').addEventListener('click', () => {
     const inputsContainer = document.getElementById('addressInputs');
@@ -23,7 +24,10 @@ document.getElementById('addressInputs').addEventListener('click', (e) => {
 
 document.getElementById('addressForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (isOptimizing) return;
     
+    const optimizeButton = document.getElementById('optimizeButton');
+    const spinner = optimizeButton.querySelector('.spinner-border');
     const addresses = Array.from(document.getElementsByClassName('address-input'))
         .map(input => input.value)
         .filter(address => address.trim() !== '');
@@ -34,6 +38,10 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
     }
 
     try {
+        isOptimizing = true;
+        optimizeButton.disabled = true;
+        spinner.classList.remove('d-none');
+
         const response = await fetch('/optimize', {
             method: 'POST',
             headers: {
@@ -54,6 +62,10 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
     } catch (error) {
         console.error('Error:', error);
         alert('An error occurred while optimizing the route');
+    } finally {
+        isOptimizing = false;
+        optimizeButton.disabled = false;
+        spinner.classList.add('d-none');
     }
 });
 

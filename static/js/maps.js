@@ -2,6 +2,7 @@ let map;
 let markers = [];
 let directionsService;
 let directionsRenderer;
+let isProcessing = false;
 
 function initMap() {
     try {
@@ -38,12 +39,17 @@ function initMap() {
     }
 }
 
-function addMarker(location, label) {
+async function addMarker(location, label) {
     if (!map) return;
-    const marker = new google.maps.Marker({
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+        map,
         position: location,
-        map: map,
-        label: label.toString()
+        title: `Stop ${label}`,
+        content: new google.maps.marker.PinElement({
+            glyph: label.toString(),
+            glyphColor: '#ffffff',
+            background: '#1a73e8'
+        })
     });
     markers.push(marker);
 }
@@ -83,7 +89,7 @@ function updateRouteInfo(totalDistance, totalDuration) {
     routeInfo.style.display = 'block';
 }
 
-function displayRoute(addresses, totalDistance = null, totalDuration = null) {
+async function displayRoute(addresses, totalDistance = null, totalDuration = null) {
     if (!directionsService || !directionsRenderer || addresses.length < 2) return;
 
     clearMarkers();
@@ -95,32 +101,38 @@ function displayRoute(addresses, totalDistance = null, totalDuration = null) {
         stopover: true
     }));
 
-    directionsService.route({
-        origin: origin,
-        destination: destination,
-        waypoints: waypoints,
-        optimizeWaypoints: false, // We're using our own optimization
-        travelMode: google.maps.TravelMode.DRIVING
-    }, (response, status) => {
-        if (status === 'OK') {
-            directionsRenderer.setDirections(response);
-            const route = response.routes[0];
-            
-            // Add markers for each stop
-            route.legs.forEach((leg, i) => {
-                if (i === 0) {
-                    addMarker(leg.start_location, i + 1);
-                }
-                addMarker(leg.end_location, i + 2);
+    try {
+        const response = await new Promise((resolve, reject) => {
+            directionsService.route({
+                origin: origin,
+                destination: destination,
+                waypoints: waypoints,
+                optimizeWaypoints: false, // We're using our own optimization
+                travelMode: google.maps.TravelMode.DRIVING
+            }, (result, status) => {
+                if (status === 'OK') resolve(result);
+                else reject(new Error(`Directions request failed: ${status}`));
             });
+        });
 
-            // Update route information if provided
-            if (totalDistance !== null && totalDuration !== null) {
-                updateRouteInfo(totalDistance, totalDuration);
+        directionsRenderer.setDirections(response);
+        const route = response.routes[0];
+        
+        // Add markers for each stop
+        for (let i = 0; i < route.legs.length; i++) {
+            const leg = route.legs[i];
+            if (i === 0) {
+                await addMarker(leg.start_location, i + 1);
             }
-        } else {
-            console.error('Directions request failed:', status);
-            alert('Failed to calculate route. Please check the addresses and try again.');
+            await addMarker(leg.end_location, i + 2);
         }
-    });
+
+        // Update route information if provided
+        if (totalDistance !== null && totalDuration !== null) {
+            updateRouteInfo(totalDistance, totalDuration);
+        }
+    } catch (error) {
+        console.error('Error displaying route:', error);
+        alert('Failed to calculate route. Please check the addresses and try again.');
+    }
 }
