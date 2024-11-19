@@ -154,8 +154,8 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
         optimizeButton.disabled = true;
         spinner.classList.remove('d-none');
         showLoadingOverlay('Optimizing route...');
-        updateProgress(1);
-
+        
+        updateProgress(1, 3); // Geocoding
         const response = await fetch('/optimize', {
             method: 'POST',
             headers: {
@@ -167,13 +167,13 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
                 description: routeDescription
             })
         });
-
+        
         const data = await response.json();
         if (data.success) {
-            updateProgress(2);
+            updateProgress(2, 3); // Route calculation
             currentRouteId = data.route_id;
             await displayRoute(data.addresses, data.total_distance, data.total_duration);
-            updateProgress(3);
+            updateProgress(3, 3); // Display complete
             updateOptimizedRouteList(data.addresses);
             document.getElementById('exportRoute').style.display = 'block';
             document.getElementById('saveRouteForm').style.display = 'none';

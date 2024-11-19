@@ -6,74 +6,21 @@ let isProcessing = false;
 let mapBounds;
 
 function initMap() {
-    if (typeof google === 'undefined') {
-        setTimeout(initMap, 100);
-        return;
-    }
-
     try {
-        if (!google || !google.maps) {
-            throw new Error('Google Maps API not loaded');
-        }
-
         const mapOptions = {
             center: { lat: 40.7128, lng: -74.0060 },
-            zoom: 13,
-            mapId: 'DEMO_MAP_ID',
-            styles: [
-                {
-                    featureType: "all",
-                    elementType: "labels.text.fill",
-                    stylers: [{ color: "#ffffff" }]
-                }
-            ]
+            zoom: 13
         };
-
         map = new google.maps.Map(document.getElementById('map'), mapOptions);
-        mapBounds = new google.maps.LatLngBounds();
-        
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer({
             map: map,
-            suppressMarkers: true,
-            polylineOptions: {
-                strokeColor: "#1a73e8",
-                strokeOpacity: 0.8,
-                strokeWeight: 5
-            }
+            suppressMarkers: true
         });
-
-        // Add map controls
-        const zoomControl = document.createElement("div");
-        zoomControl.className = "map-control";
-        const zoomInButton = createMapButton("Zoom In", "fas fa-plus");
-        const zoomOutButton = createMapButton("Zoom Out", "fas fa-minus");
-        
-        zoomInButton.addEventListener("click", () => {
-            map.setZoom(map.getZoom() + 1);
-        });
-        zoomOutButton.addEventListener("click", () => {
-            map.setZoom(map.getZoom() - 1);
-        });
-
-        zoomControl.appendChild(zoomInButton);
-        zoomControl.appendChild(zoomOutButton);
-        map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(zoomControl);
-
     } catch (error) {
         console.error('Error initializing map:', error);
         showMapError();
     }
-}
-
-function createMapButton(title, iconClass) {
-    const button = document.createElement("button");
-    button.className = "btn btn-dark btn-sm m-2";
-    button.setAttribute("title", title);
-    const icon = document.createElement("i");
-    icon.className = iconClass;
-    button.appendChild(icon);
-    return button;
 }
 
 function showMapError() {
@@ -130,6 +77,9 @@ async function addMarker(location, label, isStart = false, isEnd = false) {
         });
 
         markers.push(marker);
+        if (!mapBounds) {
+            mapBounds = new google.maps.LatLngBounds();
+        }
         mapBounds.extend(location);
         map.fitBounds(mapBounds);
     } catch (error) {
@@ -232,7 +182,9 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
         });
 
         directionsRenderer.setDirections(response);
-        map.fitBounds(mapBounds);
+        if (mapBounds) {
+            map.fitBounds(mapBounds);
+        }
 
         // Update route information if provided
         if (totalDistance !== null && totalDuration !== null) {
