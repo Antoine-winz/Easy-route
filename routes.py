@@ -110,6 +110,8 @@ def optimize_route():
     try:
         data = request.get_json()
         addresses = data.get('addresses', [])
+        has_end_point = data.get('has_end_point', False)
+        end_point = data.get('end_point')
         route_name = data.get('name', f"Route {datetime.utcnow()}")
         route_description = data.get('description', '')
         
@@ -120,6 +122,16 @@ def optimize_route():
                 'success': False,
                 'error': 'At least two addresses are required'
             }), 400
+
+        if has_end_point and not end_point:
+            return jsonify({
+                'success': False,
+                'error': 'End point is required when has_end_point is true'
+            }), 400
+
+        # If end point is specified, add it to addresses
+        if has_end_point and end_point:
+            addresses.append(end_point)
 
         # Store initial route in database
         try:
@@ -179,7 +191,7 @@ def optimize_route():
             
             # Calculate optimal route
             app.logger.info("Calculating optimal route")
-            optimal_route_indices = nearest_neighbor(distance_matrix)
+            optimal_route_indices = nearest_neighbor(distance_matrix, has_end_point)
             optimized_addresses = [geocoded_addresses[i] for i in optimal_route_indices]
             app.logger.info("Route optimization complete")
             
@@ -268,16 +280,35 @@ def get_distance_matrix(locations, api_key):
     
     return distance_matrix, duration_matrix
 
-def nearest_neighbor(distance_matrix):
+def nearest_neighbor(distance_matrix, has_end_point=False):
     n = len(distance_matrix)
-    unvisited = set(range(1, n))  # Skip start point
-    current = 0  # Start from first location
-    path = [current]
     
-    while unvisited:
-        next_point = min(unvisited, key=lambda x: distance_matrix[current][x])
-        path.append(next_point)
-        unvisited.remove(next_point)
-        current = next_point
+    if n <= 2:  # If only start and end points, return as is
+        return list(range(n))
+        
+    if has_end_point:
+        # Only optimize intermediate points (excluding start and end)
+        unvisited = set(range(1, n-1))  # Skip start and end points
+        current = 0  # Start from first location
+        path = [current]
+        
+        while unvisited:
+            next_point = min(unvisited, key=lambda x: distance_matrix[current][x])
+            path.append(next_point)
+            unvisited.remove(next_point)
+            current = next_point
+            
+        path.append(n-1)  # Add end point
+    else:
+        # Optimize all points except start
+        unvisited = set(range(1, n))  # Skip start point
+        current = 0  # Start from first location
+        path = [current]
+        
+        while unvisited:
+            next_point = min(unvisited, key=lambda x: distance_matrix[current][x])
+            path.append(next_point)
+            unvisited.remove(next_point)
+            current = next_point
     
     return path

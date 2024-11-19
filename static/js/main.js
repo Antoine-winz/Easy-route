@@ -55,6 +55,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const input = endPointInput.querySelector('.address-input');
         if (this.checked) {
             initializeAutocomplete(input);
+            input.required = true;
+        } else {
+            input.required = false;
         }
     });
 
@@ -158,12 +161,13 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
         .map(input => input.value)
         .filter(address => address.trim() !== '');
     
-    if (hasEndPoint && endPointInput.value.trim()) {
-        addresses.push(endPointInput.value.trim());
+    if (addresses.length < 2 && !hasEndPoint) {
+        showErrorAlert('Please enter at least 2 addresses');
+        return;
     }
 
-    if (addresses.length < 2) {
-        showErrorAlert('Please enter at least 2 addresses');
+    if (hasEndPoint && !endPointInput.value.trim()) {
+        showErrorAlert('Please enter an end point address');
         return;
     }
 
@@ -185,6 +189,8 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
             },
             body: JSON.stringify({
                 addresses,
+                has_end_point: hasEndPoint,
+                end_point: hasEndPoint ? endPointInput.value.trim() : null,
                 name: routeName,
                 description: routeDescription
             })
