@@ -8,11 +8,11 @@
     <script src="https://kit.fontawesome.com/your-code.js" crossorigin="anonymous"></script>
     <script>
         function initMap() {
-            // Existing initMap code will be called once the API is loaded
+            // Will be implemented in maps.js
         }
     </script>
     <script async
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places,marker&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap&v=beta">
     </script>
 </head>
 <body>

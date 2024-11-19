@@ -6,16 +6,18 @@ let isProcessing = false;
 
 function initMap() {
     try {
-        // Check if google maps API is loaded properly
         if (!google || !google.maps) {
             throw new Error('Google Maps API not loaded');
         }
 
-        map = new google.maps.Map(document.getElementById('map'), {
+        const mapOptions = {
             center: { lat: 40.7128, lng: -74.0060 },
-            zoom: 13
-        });
+            zoom: 13,
+            mapId: 'DEMO_MAP_ID' // This enables Advanced Markers
+        };
 
+        map = new google.maps.Map(document.getElementById('map'), mapOptions);
+        
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer({
             map: map,
@@ -23,20 +25,24 @@ function initMap() {
         });
     } catch (error) {
         console.error('Error initializing map:', error);
-        const mapDiv = document.getElementById('map');
-        mapDiv.innerHTML = `
-            <div class="alert alert-danger" role="alert">
-                <h4 class="alert-heading">Map Loading Error</h4>
-                <p>We're unable to load Google Maps at the moment. This might be because:</p>
-                <ul>
-                    <li>The Google Maps API key is invalid or missing</li>
-                    <li>Required Google Maps APIs are not enabled</li>
-                    <li>There's a network connectivity issue</li>
-                </ul>
-                <p>Please try refreshing the page. If the problem persists, contact support.</p>
-            </div>
-        `;
+        showMapError();
     }
+}
+
+function showMapError() {
+    const mapDiv = document.getElementById('map');
+    mapDiv.innerHTML = `
+        <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading">Map Loading Error</h4>
+            <p>We're unable to load Google Maps at the moment. This might be because:</p>
+            <ul>
+                <li>The Google Maps API key is invalid or missing</li>
+                <li>Required Google Maps APIs are not enabled</li>
+                <li>There's a network connectivity issue</li>
+            </ul>
+            <p>Please try refreshing the page. If the problem persists, contact support.</p>
+        </div>
+    `;
 }
 
 async function addMarker(location, label) {
@@ -52,7 +58,7 @@ async function addMarker(location, label) {
         map,
         position: location,
         title: `Stop ${label}`,
-        content: pinElement.element  // Changed from pinElement to pinElement.element
+        content: pinElement.element
     });
     markers.push(marker);
 }
