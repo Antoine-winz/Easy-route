@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Saved Routes</h2>
+        </div>
+        <div class="col text-end">
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create New Route
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for route in routes %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ route.name }}</h5>
+                    {% if route.description %}
+                    <p class="card-text text-muted">{{ route.description }}</p>
+                    {% endif %}
+                    <p class="card-text">
+                        <small class="text-muted">
+                            Created: {{ route.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        </small>
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-info me-2">{{ route.addresses|length }} stops</span>
+                            {% if route.total_distance %}
+                            <span class="badge bg-success">{{ (route.total_distance/1000)|round(1) }} km</span>
+                            {% endif %}
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary btn-sm load-route" data-route-id="{{ route.id }}">
+                                <i class="fas fa-map-marked-alt"></i> Load
+                            </button>
+                            <a href="{{ url_for('export_route', route_id=route.id) }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-download"></i> Export
+                            </a>
+                            <button class="btn btn-outline-danger btn-sm delete-route" data-route-id="{{ route.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle load route button clicks
+    document.querySelectorAll('.load-route').forEach(button => {
+        button.addEventListener('click', async function() {
+            const routeId = this.dataset.routeId;
+            try {
+                const response = await fetch(`/routes/${routeId}`);
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = `/?route_id=${routeId}`;
+                } else {
+                    alert('Failed to load route: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error loading route:', error);
+                alert('Failed to load route. Please try again.');
+            }
+        });
+    });
+
+    // Handle delete route button clicks
+    document.querySelectorAll('.delete-route').forEach(button => {
+        button.addEventListener('click', async function() {
+            if (!confirm('Are you sure you want to delete this route?')) return;
+            
+            const routeId = this.dataset.routeId;
+            try {
+                const response = await fetch(`/routes/${routeId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Failed to delete route: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error deleting route:', error);
+                alert('Failed to delete route. Please try again.');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

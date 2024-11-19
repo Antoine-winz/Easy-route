@@ -1,4 +1,4 @@
-from flask import render_template, jsonify, request
+from flask import render_template, jsonify, request, redirect, url_for
 from app import app, db
 from models import Route
 from datetime import datetime
@@ -7,7 +7,68 @@ import numpy as np
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    route_id = request.args.get('route_id')
+    route = None
+    if route_id:
+        route = Route.query.get(route_id)
+    return render_template('index.html', route=route)
+
+@app.route('/routes')
+def list_routes():
+    routes = Route.query.order_by(Route.created_at.desc()).all()
+    return render_template('routes.html', routes=routes)
+
+@app.route('/routes/<int:route_id>', methods=['GET'])
+def get_route(route_id):
+    try:
+        route = Route.query.get_or_404(route_id)
+        return jsonify({
+            'success': True,
+            'route': route.to_dict()
+        })
+    except Exception as e:
+        app.logger.error(f"Error fetching route: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to fetch route'
+        }), 404
+
+@app.route('/routes/<int:route_id>', methods=['DELETE'])
+def delete_route(route_id):
+    try:
+        route = Route.query.get_or_404(route_id)
+        db.session.delete(route)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        app.logger.error(f"Error deleting route: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to delete route'
+        }), 500
+
+@app.route('/routes/<int:route_id>', methods=['PUT'])
+def update_route(route_id):
+    try:
+        route = Route.query.get_or_404(route_id)
+        data = request.json
+        
+        if 'name' in data:
+            route.name = data['name']
+        if 'description' in data:
+            route.description = data['description']
+            
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'route': route.to_dict()
+        })
+    except Exception as e:
+        app.logger.error(f"Error updating route: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to update route'
+        }), 500
 
 def get_distance_matrix(locations, api_key):
     url = "https://maps.googleapis.com/maps/api/distancematrix/json"
@@ -60,6 +121,8 @@ def optimize_route():
     try:
         data = request.get_json()
         addresses = data.get('addresses', [])
+        route_name = data.get('name', f"Route {datetime.utcnow()}")
+        route_description = data.get('description', '')
         
         app.logger.info(f"Received {len(addresses)} addresses for optimization")
         
@@ -73,7 +136,8 @@ def optimize_route():
         try:
             app.logger.info("Storing initial route in database")
             route = Route(
-                name=f"Route {datetime.utcnow()}",
+                name=route_name,
+                description=route_description,
                 addresses=addresses,
                 optimized_route=addresses  # Initially same as input order
             )
@@ -136,9 +200,11 @@ def optimize_route():
             total_duration = sum(duration_matrix[optimal_route_indices[i]][optimal_route_indices[i+1]] 
                             for i in range(len(optimal_route_indices)-1))
             
-            # Update route with optimized addresses
+            # Update route with optimized addresses and statistics
             app.logger.info("Updating route with optimized addresses")
             route.optimized_route = optimized_addresses
+            route.total_distance = total_distance
+            route.total_duration = total_duration
             db.session.commit()
             app.logger.info(f"Route {route.id} successfully optimized")
             
