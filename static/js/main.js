@@ -4,8 +4,7 @@ let autocompleteInstances = [];
 
 function initializeAutocomplete(input) {
     const autocomplete = new google.maps.places.Autocomplete(input, {
-        types: ['address'],
-        componentRestrictions: { country: ['us'] }
+        types: ['address']
     });
     autocomplete.addListener('place_changed', () => {
         input.classList.remove('is-invalid');
@@ -47,6 +46,17 @@ function hideLoadingOverlay() {
     const overlay = document.querySelector('.loading-overlay');
     overlay.style.display = 'none';
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Update the first address input placeholder and tooltip
+    const firstInput = document.querySelector('.address-input');
+    if (firstInput) {
+        firstInput.placeholder = 'Enter starting point address';
+        firstInput.setAttribute('data-bs-toggle', 'tooltip');
+        firstInput.setAttribute('data-bs-title', 'This will be your route starting point');
+        initializeAutocomplete(firstInput);
+    }
+});
 
 document.getElementById('addAddress').addEventListener('click', () => {
     const inputsContainer = document.getElementById('addressInputs');
@@ -232,14 +242,8 @@ function showErrorAlert(message) {
     showAlert(message, 'danger');
 }
 
-// Initialize autocomplete for the first address input
+// Load saved route if route_id is in URL
 document.addEventListener('DOMContentLoaded', async () => {
-    const firstInput = document.querySelector('.address-input');
-    if (firstInput) {
-        initializeAutocomplete(firstInput);
-    }
-
-    // Load saved route if route_id is in URL
     const urlParams = new URLSearchParams(window.location.search);
     const routeId = urlParams.get('route_id');
     

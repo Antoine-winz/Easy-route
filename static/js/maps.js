@@ -6,6 +6,11 @@ let isProcessing = false;
 let mapBounds;
 
 function initMap() {
+    if (typeof google === 'undefined') {
+        setTimeout(initMap, 100);
+        return;
+    }
+
     try {
         if (!google || !google.maps) {
             throw new Error('Google Maps API not loaded');
