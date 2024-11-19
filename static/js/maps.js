@@ -8,8 +8,8 @@ let mapBounds;
 function initMap() {
     try {
         const mapOptions = {
-            center: { lat: 40.7128, lng: -74.0060 },
-            zoom: 13
+            center: { lat: 46.8182, lng: 8.2275 }, // Switzerland center
+            zoom: 8  // Adjusted for country-level view
         };
         map = new google.maps.Map(document.getElementById('map'), mapOptions);
         directionsService = new google.maps.DirectionsService();

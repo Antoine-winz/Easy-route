@@ -62,15 +62,13 @@
         }
     </style>
     <script>
-        let map;
         function initMap() {
             // Will be implemented in maps.js
         }
     </script>
-    <script
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places,marker&callback=initMap"
-        defer
-    ></script>
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places,marker&callback=initMap">
+    </script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
