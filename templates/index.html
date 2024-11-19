@@ -3,13 +3,29 @@
 {% block content %}
 <div class="row">
     <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Saved Routes</h5>
+                <ul id="savedRoutes" class="list-group">
+                    <!-- Saved routes will be loaded here -->
+                </ul>
+            </div>
+        </div>
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">Delivery Addresses</h5>
                 <form id="addressForm">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="routeName" placeholder="Route Name (optional)">
+                    </div>
                     <div id="addressInputs">
                         <div class="mb-3">
-                            <input type="text" class="form-control address-input" placeholder="Enter address">
+                            <div class="input-group">
+                                <input type="text" class="form-control address-input" placeholder="Enter address">
+                                <button type="button" class="btn btn-danger remove-address">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <button type="button" class="btn btn-secondary" id="addAddress">
@@ -48,7 +64,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap" loading="async" defer></script>
+<script async src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap"></script>
 <script src="{{ url_for('static', filename='js/maps.js') }}"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% endblock %}

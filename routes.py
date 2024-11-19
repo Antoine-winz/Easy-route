@@ -7,7 +7,50 @@ import numpy as np
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # Get all saved routes for display
+    saved_routes = Route.query.order_by(Route.created_at.desc()).all()
+    return render_template('index.html', saved_routes=saved_routes)
+
+@app.route('/routes', methods=['GET'])
+def get_saved_routes():
+    try:
+        routes = Route.query.order_by(Route.created_at.desc()).all()
+        return jsonify({
+            'success': True,
+            'routes': [{
+                'id': route.id,
+                'name': route.name,
+                'created_at': route.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'address_count': len(route.addresses)
+            } for route in routes]
+        })
+    except Exception as e:
+        app.logger.error(f"Error fetching routes: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to fetch saved routes'
+        }), 500
+
+@app.route('/routes/<int:route_id>', methods=['GET'])
+def get_route(route_id):
+    try:
+        route = Route.query.get_or_404(route_id)
+        return jsonify({
+            'success': True,
+            'route': {
+                'id': route.id,
+                'name': route.name,
+                'addresses': route.addresses,
+                'optimized_route': route.optimized_route,
+                'created_at': route.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            }
+        })
+    except Exception as e:
+        app.logger.error(f"Error fetching route: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to fetch route'
+        }), 500
 
 def get_distance_matrix(locations, api_key):
     url = "https://maps.googleapis.com/maps/api/distancematrix/json"
@@ -60,6 +103,7 @@ def optimize_route():
     try:
         data = request.get_json()
         addresses = data.get('addresses', [])
+        route_name = data.get('name', f"Route {datetime.utcnow()}")
         
         if not addresses or len(addresses) < 2:
             return jsonify({
@@ -70,7 +114,7 @@ def optimize_route():
         # Store initial route in database
         try:
             route = Route(
-                name=f"Route {datetime.utcnow()}",
+                name=route_name,
                 addresses=addresses,
                 optimized_route=addresses  # Initially same as input order
             )
