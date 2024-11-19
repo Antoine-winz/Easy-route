@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Delivery Addresses</h5>
+                <form id="addressForm">
+                    <div id="addressInputs">
+                        <div class="mb-3">
+                            <input type="text" class="form-control address-input" placeholder="Enter address">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="addAddress">
+                        <i class="fas fa-plus"></i> Add Address
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-route"></i> Optimize Route
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 class="card-title">Optimized Route</h5>
+                <ol id="optimizedRoute" class="list-group list-group-numbered">
+                </ol>
+                <button id="exportRoute" class="btn btn-success mt-3" style="display: none;">
+                    <i class="fas fa-download"></i> Export Route
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <div id="map" style="height: 600px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places"></script>
+<script src="{{ url_for('static', filename='js/maps.js') }}"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}
