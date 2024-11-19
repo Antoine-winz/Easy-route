@@ -20,4 +20,10 @@ db.init_app(app)
 with app.app_context():
     import models
     import routes
-    db.create_all()
+    try:
+        db.create_all()
+        app.logger.info("Database tables created successfully")
+    except Exception as e:
+        app.logger.error(f"Error creating database tables: {str(e)}")
+        # Initialize with empty tables if there's an error
+        db.session.rollback()

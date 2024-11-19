@@ -19,6 +19,41 @@ def view_route(route_id):
     route = Route.query.get_or_404(route_id)
     return render_template('route_detail.html', route=route)
 
+@app.route('/save-route', methods=['POST'])
+def save_route():
+    try:
+        data = request.get_json()
+        name = data.get('name', f"Route {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}")
+        addresses = data.get('addresses', [])
+        optimized_route = data.get('optimized_route', addresses)
+        
+        if not addresses:
+            return jsonify({
+                'success': False,
+                'error': 'No addresses provided'
+            }), 400
+
+        route = Route(
+            name=name,
+            addresses=addresses,
+            optimized_route=optimized_route
+        )
+        db.session.add(route)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'route_id': route.id,
+            'message': 'Route saved successfully'
+        })
+
+    except Exception as e:
+        app.logger.error(f"Save route error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to save route'
+        }), 500
+
 def get_distance_matrix(locations, api_key):
     url = "https://maps.googleapis.com/maps/api/distancematrix/json"
     
@@ -77,22 +112,6 @@ def optimize_route():
                 'error': 'At least two addresses are required'
             }), 400
 
-        # Store initial route in database
-        try:
-            route = Route(
-                name=f"Route {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}",
-                addresses=addresses,
-                optimized_route=addresses  # Initially same as input order
-            )
-            db.session.add(route)
-            db.session.commit()
-        except Exception as db_error:
-            app.logger.error(f"Database error: {str(db_error)}")
-            return jsonify({
-                'success': False,
-                'error': 'Failed to store route information'
-            }), 500
-
         # Geocode addresses using Google Maps Geocoding API
         api_key = app.config['GOOGLE_MAPS_API_KEY']
         geocoded_addresses = []
@@ -135,13 +154,8 @@ def optimize_route():
             total_duration = sum(duration_matrix[optimal_route_indices[i]][optimal_route_indices[i+1]] 
                                for i in range(len(optimal_route_indices)-1))
             
-            # Update route with optimized addresses
-            route.optimized_route = optimized_addresses
-            db.session.commit()
-            
             return jsonify({
                 'success': True,
-                'route_id': route.id,
                 'addresses': optimized_addresses,
                 'total_distance': total_distance,
                 'total_duration': total_duration

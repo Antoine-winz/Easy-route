@@ -1,4 +1,5 @@
 let currentRouteId = null;
+let currentOptimizedAddresses = null;
 
 document.getElementById('addAddress').addEventListener('click', () => {
     const inputsContainer = document.getElementById('addressInputs');
@@ -44,10 +45,10 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
 
         const data = await response.json();
         if (data.success) {
-            currentRouteId = data.route_id;
+            currentOptimizedAddresses = data.addresses;
             displayRoute(data.addresses, data.total_distance, data.total_duration);
             updateOptimizedRouteList(data.addresses);
-            document.getElementById('exportRoute').style.display = 'block';
+            document.getElementById('routeActions').style.display = 'block';
         } else {
             alert(data.error || 'Failed to optimize route');
         }
@@ -69,8 +70,50 @@ function updateOptimizedRouteList(addresses) {
     });
 }
 
+document.getElementById('saveRoute').addEventListener('click', async () => {
+    if (!currentOptimizedAddresses) {
+        alert('Please optimize a route first');
+        return;
+    }
+
+    const routeName = prompt('Enter a name for this route:', `Route ${new Date().toLocaleDateString()}`);
+    if (!routeName) return;
+
+    try {
+        const response = await fetch('/save-route', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: routeName,
+                addresses: currentOptimizedAddresses,
+                optimized_route: currentOptimizedAddresses
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            currentRouteId = data.route_id;
+            alert('Route saved successfully!');
+            document.getElementById('viewRoute').style.display = 'inline-block';
+        } else {
+            alert(data.error || 'Failed to save route');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while saving the route');
+    }
+});
+
 document.getElementById('exportRoute').addEventListener('click', () => {
     if (currentRouteId) {
         window.location.href = `/export/${currentRouteId}`;
+    }
+});
+
+document.getElementById('viewRoute').addEventListener('click', () => {
+    if (currentRouteId) {
+        window.location.href = `/routes/${currentRouteId}`;
     }
 });
