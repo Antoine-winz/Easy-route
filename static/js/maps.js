@@ -48,23 +48,30 @@ function showMapError() {
 async function addMarker(location, label) {
     if (!map) return;
     
-    const pinElement = new google.maps.marker.PinElement({
-        glyph: label.toString(),
-        glyphColor: '#ffffff',
-        background: '#1a73e8'
-    });
-
-    const marker = new google.maps.marker.AdvancedMarkerElement({
-        map,
-        position: location,
-        title: `Stop ${label}`,
-        content: pinElement.element
-    });
-    markers.push(marker);
+    try {
+        // Create a marker
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+            map,
+            position: location,
+            title: `Stop ${label}`,
+            content: new google.maps.marker.PinElement({
+                glyph: label.toString(),
+                glyphColor: "#ffffff",
+                background: "#1a73e8"
+            }).element
+        });
+        markers.push(marker);
+    } catch (error) {
+        console.error('Error creating marker:', error);
+    }
 }
 
 function clearMarkers() {
-    markers.forEach(marker => marker.setMap(null));
+    markers.forEach(marker => {
+        if (marker && marker.setMap) {
+            marker.setMap(null);
+        }
+    });
     markers = [];
     if (directionsRenderer) {
         directionsRenderer.setDirections({routes: []});
@@ -103,20 +110,38 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
 
     clearMarkers();
 
-    const origin = addresses[0];
-    const destination = addresses[addresses.length - 1];
-    const waypoints = addresses.slice(1, -1).map(address => ({
-        location: address,
-        stopover: true
-    }));
+    // First, geocode all addresses and create markers
+    for (let i = 0; i < addresses.length; i++) {
+        const geocoder = new google.maps.Geocoder();
+        try {
+            const result = await new Promise((resolve, reject) => {
+                geocoder.geocode({ address: addresses[i] }, (results, status) => {
+                    if (status === 'OK') resolve(results[0].geometry.location);
+                    else reject(new Error(`Geocoding failed: ${status}`));
+                });
+            });
+            await addMarker(result, i + 1);
+        } catch (error) {
+            console.error(`Error creating marker for address ${i + 1}:`, error);
+            continue;
+        }
+    }
 
+    // Then calculate and display the route
     try {
+        const origin = addresses[0];
+        const destination = addresses[addresses.length - 1];
+        const waypoints = addresses.slice(1, -1).map(address => ({
+            location: address,
+            stopover: true
+        }));
+
         const response = await new Promise((resolve, reject) => {
             directionsService.route({
                 origin: origin,
                 destination: destination,
                 waypoints: waypoints,
-                optimizeWaypoints: false, // We're using our own optimization
+                optimizeWaypoints: false,
                 travelMode: google.maps.TravelMode.DRIVING
             }, (result, status) => {
                 if (status === 'OK') resolve(result);
@@ -125,16 +150,6 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
         });
 
         directionsRenderer.setDirections(response);
-        const route = response.routes[0];
-        
-        // Add markers for each stop
-        for (let i = 0; i < route.legs.length; i++) {
-            const leg = route.legs[i];
-            if (i === 0) {
-                await addMarker(leg.start_location, i + 1);
-            }
-            await addMarker(leg.end_location, i + 2);
-        }
 
         // Update route information if provided
         if (totalDistance !== null && totalDuration !== null) {
