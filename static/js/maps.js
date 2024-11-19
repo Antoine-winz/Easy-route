@@ -41,15 +41,18 @@ function initMap() {
 
 async function addMarker(location, label) {
     if (!map) return;
+    
+    const pinElement = new google.maps.marker.PinElement({
+        glyph: label.toString(),
+        glyphColor: '#ffffff',
+        background: '#1a73e8'
+    });
+
     const marker = new google.maps.marker.AdvancedMarkerElement({
         map,
         position: location,
         title: `Stop ${label}`,
-        content: new google.maps.marker.PinElement({
-            glyph: label.toString(),
-            glyphColor: '#ffffff',
-            background: '#1a73e8'
-        })
+        content: pinElement.element  // Changed from pinElement to pinElement.element
     });
     markers.push(marker);
 }

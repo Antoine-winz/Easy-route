@@ -61,6 +61,8 @@ def optimize_route():
         data = request.get_json()
         addresses = data.get('addresses', [])
         
+        app.logger.info(f"Received {len(addresses)} addresses for optimization")
+        
         if not addresses or len(addresses) < 2:
             return jsonify({
                 'success': False,
@@ -69,6 +71,7 @@ def optimize_route():
 
         # Store initial route in database
         try:
+            app.logger.info("Storing initial route in database")
             route = Route(
                 name=f"Route {datetime.utcnow()}",
                 addresses=addresses,
@@ -76,6 +79,7 @@ def optimize_route():
             )
             db.session.add(route)
             db.session.commit()
+            app.logger.info(f"Initial route stored with ID: {route.id}")
         except Exception as db_error:
             app.logger.error(f"Database error: {str(db_error)}")
             return jsonify({
@@ -84,6 +88,7 @@ def optimize_route():
             }), 500
 
         # Geocode addresses using Google Maps Geocoding API
+        app.logger.info("Starting geocoding process")
         api_key = app.config['GOOGLE_MAPS_API_KEY']
         geocoded_addresses = []
         coordinates = []
@@ -94,6 +99,7 @@ def optimize_route():
                     'address': address,
                     'key': api_key
                 }
+                app.logger.info(f"Geocoding address: {address}")
                 response = requests.get('https://maps.googleapis.com/maps/api/geocode/json', params=params)
                 result = response.json()
                 
@@ -104,6 +110,7 @@ def optimize_route():
                 formatted_address = location['formatted_address']
                 geocoded_addresses.append(formatted_address)
                 coordinates.append(f"{location['geometry']['location']['lat']},{location['geometry']['location']['lng']}")
+                app.logger.info(f"Successfully geocoded address: {formatted_address}")
             except Exception as geo_error:
                 app.logger.error(f"Geocoding error: {str(geo_error)}")
                 return jsonify({
@@ -113,21 +120,27 @@ def optimize_route():
 
         try:
             # Get distance matrix
+            app.logger.info("Calculating distance matrix")
             distance_matrix, duration_matrix = get_distance_matrix(coordinates, api_key)
+            app.logger.info("Distance matrix calculation complete")
             
             # Calculate optimal route
+            app.logger.info("Calculating optimal route")
             optimal_route_indices = nearest_neighbor(distance_matrix)
             optimized_addresses = [geocoded_addresses[i] for i in optimal_route_indices]
+            app.logger.info("Route optimization complete")
             
             # Calculate total distance and duration
             total_distance = sum(distance_matrix[optimal_route_indices[i]][optimal_route_indices[i+1]] 
-                               for i in range(len(optimal_route_indices)-1))
+                            for i in range(len(optimal_route_indices)-1))
             total_duration = sum(duration_matrix[optimal_route_indices[i]][optimal_route_indices[i+1]] 
-                               for i in range(len(optimal_route_indices)-1))
+                            for i in range(len(optimal_route_indices)-1))
             
             # Update route with optimized addresses
+            app.logger.info("Updating route with optimized addresses")
             route.optimized_route = optimized_addresses
             db.session.commit()
+            app.logger.info(f"Route {route.id} successfully optimized")
             
             return jsonify({
                 'success': True,
