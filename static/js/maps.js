@@ -56,8 +56,37 @@ function clearMarkers() {
     }
 }
 
-function displayRoute(addresses) {
+function formatDistance(meters) {
+    if (meters < 1000) {
+        return `${Math.round(meters)} m`;
+    }
+    return `${(meters / 1000).toFixed(1)} km`;
+}
+
+function formatDuration(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0) {
+        return `${hours} hr ${minutes} min`;
+    }
+    return `${minutes} min`;
+}
+
+function updateRouteInfo(totalDistance, totalDuration) {
+    const routeInfo = document.getElementById('routeInfo');
+    const totalDistanceElement = document.getElementById('totalDistance');
+    const totalDurationElement = document.getElementById('totalDuration');
+    
+    totalDistanceElement.textContent = `Total Distance: ${formatDistance(totalDistance)}`;
+    totalDurationElement.textContent = `Estimated Time: ${formatDuration(totalDuration)}`;
+    routeInfo.style.display = 'block';
+}
+
+function displayRoute(addresses, totalDistance = null, totalDuration = null) {
     if (!directionsService || !directionsRenderer || addresses.length < 2) return;
+
+    clearMarkers();
 
     const origin = addresses[0];
     const destination = addresses[addresses.length - 1];
@@ -70,7 +99,7 @@ function displayRoute(addresses) {
         origin: origin,
         destination: destination,
         waypoints: waypoints,
-        optimizeWaypoints: true,
+        optimizeWaypoints: false, // We're using our own optimization
         travelMode: google.maps.TravelMode.DRIVING
     }, (response, status) => {
         if (status === 'OK') {
@@ -84,6 +113,11 @@ function displayRoute(addresses) {
                 }
                 addMarker(leg.end_location, i + 2);
             });
+
+            // Update route information if provided
+            if (totalDistance !== null && totalDuration !== null) {
+                updateRouteInfo(totalDistance, totalDuration);
+            }
         } else {
             console.error('Directions request failed:', status);
             alert('Failed to calculate route. Please check the addresses and try again.');

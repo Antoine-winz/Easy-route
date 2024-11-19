@@ -45,9 +45,11 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
         const data = await response.json();
         if (data.success) {
             currentRouteId = data.route_id;
-            displayRoute(data.addresses);
+            displayRoute(data.addresses, data.total_distance, data.total_duration);
             updateOptimizedRouteList(data.addresses);
             document.getElementById('exportRoute').style.display = 'block';
+        } else {
+            alert(data.error || 'Failed to optimize route');
         }
     } catch (error) {
         console.error('Error:', error);

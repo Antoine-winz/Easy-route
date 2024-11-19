@@ -3,10 +3,57 @@ from app import app, db
 from models import Route
 from datetime import datetime
 import requests
+import numpy as np
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+def get_distance_matrix(locations, api_key):
+    url = "https://maps.googleapis.com/maps/api/distancematrix/json"
+    
+    # Create a matrix of all distances
+    n = len(locations)
+    distance_matrix = np.zeros((n, n))
+    duration_matrix = np.zeros((n, n))
+    
+    for i in range(n):
+        params = {
+            'origins': locations[i],
+            'destinations': '|'.join(locations),
+            'key': api_key,
+            'mode': 'driving'
+        }
+        
+        response = requests.get(url, params=params)
+        result = response.json()
+        
+        if result['status'] != 'OK':
+            raise Exception(f"Distance Matrix API failed: {result['status']}")
+            
+        for j in range(n):
+            element = result['rows'][0]['elements'][j]
+            if element['status'] == 'OK':
+                distance_matrix[i][j] = element['distance']['value']
+                duration_matrix[i][j] = element['duration']['value']
+            else:
+                raise Exception(f"Unable to calculate distance between points {i} and {j}")
+    
+    return distance_matrix, duration_matrix
+
+def nearest_neighbor(distance_matrix):
+    n = len(distance_matrix)
+    unvisited = set(range(1, n))  # Skip start point
+    current = 0  # Start from first location
+    path = [current]
+    
+    while unvisited:
+        next_point = min(unvisited, key=lambda x: distance_matrix[current][x])
+        path.append(next_point)
+        unvisited.remove(next_point)
+        current = next_point
+    
+    return path
 
 @app.route('/optimize', methods=['POST'])
 def optimize_route():
@@ -39,6 +86,7 @@ def optimize_route():
         # Geocode addresses using Google Maps Geocoding API
         api_key = app.config['GOOGLE_MAPS_API_KEY']
         geocoded_addresses = []
+        coordinates = []
         
         for address in addresses:
             try:
@@ -52,8 +100,10 @@ def optimize_route():
                 if result['status'] != 'OK':
                     raise Exception(f"Geocoding failed for address: {address}")
                 
-                location = result['results'][0]['formatted_address']
-                geocoded_addresses.append(location)
+                location = result['results'][0]
+                formatted_address = location['formatted_address']
+                geocoded_addresses.append(formatted_address)
+                coordinates.append(f"{location['geometry']['location']['lat']},{location['geometry']['location']['lng']}")
             except Exception as geo_error:
                 app.logger.error(f"Geocoding error: {str(geo_error)}")
                 return jsonify({
@@ -61,23 +111,38 @@ def optimize_route():
                     'error': f'Failed to geocode address: {address}'
                 }), 400
 
-        # Update route with geocoded addresses
         try:
-            route.addresses = geocoded_addresses
-            route.optimized_route = geocoded_addresses
+            # Get distance matrix
+            distance_matrix, duration_matrix = get_distance_matrix(coordinates, api_key)
+            
+            # Calculate optimal route
+            optimal_route_indices = nearest_neighbor(distance_matrix)
+            optimized_addresses = [geocoded_addresses[i] for i in optimal_route_indices]
+            
+            # Calculate total distance and duration
+            total_distance = sum(distance_matrix[optimal_route_indices[i]][optimal_route_indices[i+1]] 
+                               for i in range(len(optimal_route_indices)-1))
+            total_duration = sum(duration_matrix[optimal_route_indices[i]][optimal_route_indices[i+1]] 
+                               for i in range(len(optimal_route_indices)-1))
+            
+            # Update route with optimized addresses
+            route.optimized_route = optimized_addresses
             db.session.commit()
-        except Exception as db_error:
-            app.logger.error(f"Database update error: {str(db_error)}")
+            
+            return jsonify({
+                'success': True,
+                'route_id': route.id,
+                'addresses': optimized_addresses,
+                'total_distance': total_distance,
+                'total_duration': total_duration
+            })
+            
+        except Exception as opt_error:
+            app.logger.error(f"Optimization error: {str(opt_error)}")
             return jsonify({
                 'success': False,
-                'error': 'Failed to update route information'
+                'error': 'Failed to optimize route'
             }), 500
-        
-        return jsonify({
-            'success': True,
-            'route_id': route.id,
-            'addresses': geocoded_addresses
-        })
 
     except Exception as e:
         app.logger.error(f"Unexpected error: {str(e)}")
