@@ -17,8 +17,7 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 app.config["GOOGLE_MAPS_API_KEY"] = os.environ.get("GOOGLE_MAPS_API_KEY")
 db.init_app(app)
 
-# Import routes after db initialization to avoid circular imports
 with app.app_context():
-    from models import Route
+    import models
     import routes
     db.create_all()
