@@ -179,7 +179,7 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
         .map(input => input.value)
         .filter(address => address.trim() !== '');
     
-    if (addresses.length < 2 && !hasEndPoint && !isLoopRoute) {
+    if (addresses.length < 2) {
         showErrorAlert('Please enter at least 2 addresses');
         return;
     }
@@ -246,20 +246,31 @@ function updateOptimizedRouteList(addresses) {
     addresses.forEach((address, index) => {
         const isStart = index === 0;
         const isEnd = index === addresses.length - 1;
-        const isLoop = address === addresses[0] && isEnd && !isStart;
+        const isLoop = isEnd && address === addresses[0];
         
         const li = document.createElement('li');
         li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        
+        // Update badge text and color based on point type
+        let badgeText, badgeClass;
+        if (isStart) {
+            badgeText = 'Start';
+            badgeClass = 'primary';
+        } else if (isLoop) {
+            badgeText = 'Return to Start';
+            badgeClass = 'success';
+        } else if (isEnd) {
+            badgeText = 'End';
+            badgeClass = 'success';
+        } else {
+            badgeText = `Stop ${index}`;
+            badgeClass = 'secondary';
+        }
+        
         li.innerHTML = `
             <span>${address}</span>
-            <span class="badge bg-${isStart ? 'primary' : 
-                                   isLoop ? 'primary' :
-                                   isEnd ? 'success' : 
-                                   'secondary'} rounded-pill">
-                ${isStart ? 'Start' : 
-                  isLoop ? 'Return to Start' :
-                  isEnd ? 'End' : 
-                  'Stop ' + index}
+            <span class="badge bg-${badgeClass} rounded-pill">
+                ${badgeText}
             </span>
         `;
         routeList.appendChild(li);

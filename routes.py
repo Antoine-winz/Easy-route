@@ -128,14 +128,14 @@ def optimize_route():
         if is_loop_route:
             has_end_point = False  # Override end point if loop route
             end_point = addresses[0]  # Use start point as end point
+            if addresses[0] not in addresses[1:]:  # Only add if not already present
+                addresses.append(addresses[0])  # Add start point as end point
         elif has_end_point and not end_point:
             return jsonify({
                 'success': False,
                 'error': 'End point is required when has_end_point is true'
             }), 400
-
-        # If end point is specified or it's a loop route, add it to addresses
-        if (has_end_point and end_point) or is_loop_route:
+        elif has_end_point and end_point:
             if end_point not in addresses:  # Only add if not already present
                 addresses.append(end_point)
 
@@ -197,7 +197,11 @@ def optimize_route():
             
             # Calculate optimal route
             app.logger.info("Calculating optimal route")
-            optimal_route_indices = nearest_neighbor(distance_matrix, has_end_point or is_loop_route)
+            optimal_route_indices = nearest_neighbor(
+                distance_matrix, 
+                has_end_point=has_end_point,
+                is_loop_route=is_loop_route
+            )
             optimized_addresses = [geocoded_addresses[i] for i in optimal_route_indices]
             app.logger.info("Route optimization complete")
             
@@ -286,13 +290,13 @@ def get_distance_matrix(locations, api_key):
     
     return distance_matrix, duration_matrix
 
-def nearest_neighbor(distance_matrix, has_end_point=False):
+def nearest_neighbor(distance_matrix, has_end_point=False, is_loop_route=False):
     n = len(distance_matrix)
     
     if n <= 2:  # If only start and end points, return as is
         return list(range(n))
         
-    if has_end_point:
+    if has_end_point or is_loop_route:
         # Only optimize intermediate points (excluding start and end)
         unvisited = set(range(1, n-1))  # Skip start and end points
         current = 0  # Start from first location
@@ -304,7 +308,10 @@ def nearest_neighbor(distance_matrix, has_end_point=False):
             unvisited.remove(next_point)
             current = next_point
             
-        path.append(n-1)  # Add end point
+        if is_loop_route:
+            path.append(0)  # Return to start point for loop routes
+        else:
+            path.append(n-1)  # Add end point for regular routes
     else:
         # Optimize all points except start
         unvisited = set(range(1, n))  # Skip start point
