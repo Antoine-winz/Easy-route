@@ -70,14 +70,6 @@
             z-index: 1090;
         }
     </style>
-    <!-- Initialize empty function for async callback -->
-    <script>
-        function initMap() {} // Will be overridden in maps.js
-    </script>
-    <!-- Load Google Maps API asynchronously -->
-    <script async
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places,marker&callback=initMap">
-    </script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light">
@@ -132,5 +124,17 @@
         });
     </script>
     {% block scripts %}{% endblock %}
+
+    <!-- Initialize empty function for async callback -->
+    <script>
+        function initMap() {
+            // Empty function to be overridden
+        }
+    </script>
+    <!-- Load Google Maps API with defer -->
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places,marker&callback=initMap"
+        defer
+    ></script>
 </body>
 </html>
