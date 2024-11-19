@@ -9,16 +9,6 @@ import numpy as np
 def index():
     return render_template('index.html')
 
-@app.route('/routes')
-def list_routes():
-    routes = Route.query.order_by(Route.created_at.desc()).all()
-    return render_template('routes.html', routes=routes)
-
-@app.route('/routes/<int:route_id>')
-def view_route(route_id):
-    route = Route.query.get_or_404(route_id)
-    return render_template('route_detail.html', route=route)
-
 def get_distance_matrix(locations, api_key):
     url = "https://maps.googleapis.com/maps/api/distancematrix/json"
     
@@ -80,7 +70,7 @@ def optimize_route():
         # Store initial route in database
         try:
             route = Route(
-                name=f"Route {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}",
+                name=f"Route {datetime.utcnow()}",
                 addresses=addresses,
                 optimized_route=addresses  # Initially same as input order
             )
