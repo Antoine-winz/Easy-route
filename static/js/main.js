@@ -48,6 +48,16 @@ function hideLoadingOverlay() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize end point checkbox handler
+    document.getElementById('hasEndPoint').addEventListener('change', function() {
+        const endPointInput = document.getElementById('endPointInput');
+        endPointInput.style.display = this.checked ? 'block' : 'none';
+        const input = endPointInput.querySelector('.address-input');
+        if (this.checked) {
+            initializeAutocomplete(input);
+        }
+    });
+
     // Update the first address input placeholder and tooltip
     const firstInput = document.querySelector('.address-input');
     if (firstInput) {
@@ -108,6 +118,10 @@ document.getElementById('clearForm').addEventListener('click', () => {
     if (confirm('Are you sure you want to clear all fields?')) {
         document.getElementById('routeName').value = '';
         document.getElementById('routeDescription').value = '';
+        document.getElementById('hasEndPoint').checked = false;
+        document.getElementById('endPointInput').style.display = 'none';
+        document.getElementById('endPointInput').querySelector('.address-input').value = '';
+        
         const addressInputs = document.getElementById('addressInputs');
         const firstInput = addressInputs.querySelector('.address-input');
         if (firstInput) firstInput.value = '';
@@ -136,9 +150,17 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
     
     const optimizeButton = document.getElementById('optimizeButton');
     const spinner = optimizeButton.querySelector('.spinner-border');
-    const addresses = Array.from(document.getElementsByClassName('address-input'))
+    
+    // Get addresses including end point if specified
+    const hasEndPoint = document.getElementById('hasEndPoint').checked;
+    const endPointInput = document.getElementById('endPointInput').querySelector('.address-input');
+    let addresses = Array.from(document.getElementById('addressInputs').getElementsByClassName('address-input'))
         .map(input => input.value)
         .filter(address => address.trim() !== '');
+    
+    if (hasEndPoint && endPointInput.value.trim()) {
+        addresses.push(endPointInput.value.trim());
+    }
 
     if (addresses.length < 2) {
         showErrorAlert('Please enter at least 2 addresses');

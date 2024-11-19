@@ -41,6 +41,20 @@
                         </div>
                     </div>
 
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="hasEndPoint">
+                        <label class="form-check-label" for="hasEndPoint">Set specific end point</label>
+                    </div>
+                    <div id="endPointInput" class="mb-3" style="display: none;">
+                        <div class="input-group has-validation">
+                            <input type="text" class="form-control address-input" 
+                                   placeholder="Enter end point address"
+                                   data-bs-toggle="tooltip" 
+                                   title="This will be your route end point">
+                            <div class="invalid-feedback">Please enter a valid end point address.</div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <button type="button" class="btn btn-secondary" id="addAddress"
                                 data-bs-toggle="tooltip" title="Add another delivery address">
