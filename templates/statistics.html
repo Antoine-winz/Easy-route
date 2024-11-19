@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Route Analytics</h2>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ total_routes }}</h3>
+                    <p class="card-text">Total Routes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ "%.1f"|format(avg_distance/1000) }} km</h3>
+                    <p class="card-text">Average Distance</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ "%.0f"|format(avg_duration/60) }} min</h3>
+                    <p class="card-text">Average Duration</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Routes Created Over Time</h5>
+                    <canvas id="routesTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Routes by Distance</h5>
+                    <canvas id="distanceDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Destinations -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Most Frequent Destinations</h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Address</th>
+                                    <th>Frequency</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dest, freq in top_destinations %}
+                                <tr>
+                                    <td>{{ dest }}</td>
+                                    <td>{{ freq }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Routes Trend Chart
+    const monthsData = {{ months_data|tojson }};
+    const labels = monthsData.map(d => `${d.year}-${String(d.month).padStart(2, '0')}`);
+    const counts = monthsData.map(d => d.count);
+
+    new Chart(document.getElementById('routesTrendChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Routes Created',
+                data: counts,
+                borderColor: '#0d6efd',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+
+    // Distance Distribution Chart
+    const distanceData = {{ routes_by_distance|tojson }};
+    new Chart(document.getElementById('distanceDistributionChart'), {
+        type: 'pie',
+        data: {
+            labels: distanceData.map(d => d.range),
+            datasets: [{
+                data: distanceData.map(d => d.count),
+                backgroundColor: [
+                    '#0d6efd',
+                    '#6610f2',
+                    '#6f42c1',
+                    '#d63384'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -4,6 +4,7 @@ from models import Route
 from datetime import datetime
 import requests
 import numpy as np
+from sqlalchemy import func, extract, case
 
 @app.route('/')
 def index():
@@ -17,6 +18,63 @@ def index():
 def list_routes():
     routes = Route.query.order_by(Route.created_at.desc()).all()
     return render_template('routes.html', routes=routes)
+
+@app.route('/statistics')
+def route_statistics():
+    # Get basic statistics
+    total_routes = Route.query.count()
+    avg_distance = db.session.query(func.avg(Route.total_distance)).scalar() or 0
+    avg_duration = db.session.query(func.avg(Route.total_duration)).scalar() or 0
+    
+    # Get routes created per month
+    monthly_routes = db.session.query(
+        extract('year', Route.created_at).label('year'),
+        extract('month', Route.created_at).label('month'),
+        func.count(Route.id).label('count')
+    ).group_by('year', 'month').order_by('year', 'month').all()
+    
+    # Format the data for charts
+    months_data = [{'year': int(r[0]), 'month': int(r[1]), 'count': int(r[2])} 
+                  for r in monthly_routes]
+    
+    # Get routes by distance ranges
+    routes_by_distance = db.session.query(
+        case(
+            (Route.total_distance < 5000, '<5km'),
+            (Route.total_distance < 10000, '5-10km'),
+            (Route.total_distance < 20000, '10-20km'),
+            else_='>20km'
+        ).label('range'),
+        func.count(Route.id).label('count')
+    ).group_by('range').all()
+    
+    # Convert routes_by_distance to serializable format
+    distance_data = [{'range': str(r[0]), 'count': int(r[1])} for r in routes_by_distance]
+    
+    # Get most frequent destinations
+    all_addresses = []
+    routes_with_addresses = Route.query.with_entities(Route.addresses).all()
+    for route in routes_with_addresses:
+        if route.addresses:
+            all_addresses.extend(route.addresses)
+    
+    address_frequency = {}
+    for addr in all_addresses:
+        address_frequency[addr] = address_frequency.get(addr, 0) + 1
+    
+    top_destinations = sorted(
+        address_frequency.items(), 
+        key=lambda x: x[1], 
+        reverse=True
+    )[:10]
+    
+    return render_template('statistics.html',
+                         total_routes=total_routes,
+                         avg_distance=avg_distance,
+                         avg_duration=avg_duration,
+                         months_data=months_data,
+                         routes_by_distance=distance_data,
+                         top_destinations=top_destinations)
 
 @app.route('/routes/<int:route_id>', methods=['GET'])
 def get_route(route_id):
@@ -46,75 +104,6 @@ def delete_route(route_id):
             'success': False,
             'error': 'Failed to delete route'
         }), 500
-
-@app.route('/routes/<int:route_id>', methods=['PUT'])
-def update_route(route_id):
-    try:
-        route = Route.query.get_or_404(route_id)
-        data = request.json
-        
-        if 'name' in data:
-            route.name = data['name']
-        if 'description' in data:
-            route.description = data['description']
-            
-        db.session.commit()
-        return jsonify({
-            'success': True,
-            'route': route.to_dict()
-        })
-    except Exception as e:
-        app.logger.error(f"Error updating route: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'Failed to update route'
-        }), 500
-
-def get_distance_matrix(locations, api_key):
-    url = "https://maps.googleapis.com/maps/api/distancematrix/json"
-    
-    # Create a matrix of all distances
-    n = len(locations)
-    distance_matrix = np.zeros((n, n))
-    duration_matrix = np.zeros((n, n))
-    
-    for i in range(n):
-        params = {
-            'origins': locations[i],
-            'destinations': '|'.join(locations),
-            'key': api_key,
-            'mode': 'driving'
-        }
-        
-        response = requests.get(url, params=params)
-        result = response.json()
-        
-        if result['status'] != 'OK':
-            raise Exception(f"Distance Matrix API failed: {result['status']}")
-            
-        for j in range(n):
-            element = result['rows'][0]['elements'][j]
-            if element['status'] == 'OK':
-                distance_matrix[i][j] = element['distance']['value']
-                duration_matrix[i][j] = element['duration']['value']
-            else:
-                raise Exception(f"Unable to calculate distance between points {i} and {j}")
-    
-    return distance_matrix, duration_matrix
-
-def nearest_neighbor(distance_matrix):
-    n = len(distance_matrix)
-    unvisited = set(range(1, n))  # Skip start point
-    current = 0  # Start from first location
-    path = [current]
-    
-    while unvisited:
-        next_point = min(unvisited, key=lambda x: distance_matrix[current][x])
-        path.append(next_point)
-        unvisited.remove(next_point)
-        current = next_point
-    
-    return path
 
 @app.route('/optimize', methods=['POST'])
 def optimize_route():
@@ -246,3 +235,49 @@ def export_route(route_id):
             'success': False,
             'error': 'Failed to export route'
         }), 500
+
+def get_distance_matrix(locations, api_key):
+    url = "https://maps.googleapis.com/maps/api/distancematrix/json"
+    
+    # Create a matrix of all distances
+    n = len(locations)
+    distance_matrix = np.zeros((n, n))
+    duration_matrix = np.zeros((n, n))
+    
+    for i in range(n):
+        params = {
+            'origins': locations[i],
+            'destinations': '|'.join(locations),
+            'key': api_key,
+            'mode': 'driving'
+        }
+        
+        response = requests.get(url, params=params)
+        result = response.json()
+        
+        if result['status'] != 'OK':
+            raise Exception(f"Distance Matrix API failed: {result['status']}")
+            
+        for j in range(n):
+            element = result['rows'][0]['elements'][j]
+            if element['status'] == 'OK':
+                distance_matrix[i][j] = element['distance']['value']
+                duration_matrix[i][j] = element['duration']['value']
+            else:
+                raise Exception(f"Unable to calculate distance between points {i} and {j}")
+    
+    return distance_matrix, duration_matrix
+
+def nearest_neighbor(distance_matrix):
+    n = len(distance_matrix)
+    unvisited = set(range(1, n))  # Skip start point
+    current = 0  # Start from first location
+    path = [current]
+    
+    while unvisited:
+        next_point = min(unvisited, key=lambda x: distance_matrix[current][x])
+        path.append(next_point)
+        unvisited.remove(next_point)
+        current = next_point
+    
+    return path
