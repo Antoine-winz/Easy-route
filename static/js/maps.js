@@ -5,33 +5,51 @@ let directionsRenderer;
 let isProcessing = false;
 let mapBounds;
 
-async function initializeGoogleMaps() {
+async function initMap() {
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) {
+        console.error('Map container not found');
+        return;
+    }
+    
     try {
-        await new Promise((resolve, reject) => {
-            const checkInterval = setInterval(() => {
-                if (window.google && window.google.maps) {
-                    clearInterval(checkInterval);
-                    resolve();
-                }
-            }, 100);
-            
-            setTimeout(() => {
-                clearInterval(checkInterval);
-                reject(new Error('Google Maps failed to load'));
-            }, 10000);
+        // Initialize map centered on Switzerland
+        window.map = new google.maps.Map(mapContainer, {
+            center: { lat: 46.8182, lng: 8.2275 },
+            zoom: 8
         });
         
-        return true;
+        window.directionsService = new google.maps.DirectionsService();
+        window.directionsRenderer = new google.maps.DirectionsRenderer({
+            map: window.map,
+            suppressMarkers: true
+        });
+        
+        // Initialize Places Autocomplete after map is ready
+        if (google.maps.places) {
+            const inputs = document.querySelectorAll('.address-input');
+            inputs.forEach(input => {
+                const autocomplete = initializeAutocomplete(input);
+                if (autocomplete) {
+                    console.log('Autocomplete initialized for input');
+                }
+            });
+        } else {
+            console.error('Places library not loaded');
+        }
+        
     } catch (error) {
-        console.error('Error loading Google Maps:', error);
-        return false;
+        console.error('Error initializing map:', error);
+        showMapError('Failed to initialize Google Maps');
     }
 }
 
+// Make sure initMap is available globally
+window.initMap = initMap;
+
 function initializeAutocomplete(input) {
-    if (!window.google || !window.google.maps || !window.google.maps.places) {
+    if (!google || !google.maps || !google.maps.places) {
         console.error('Google Maps Places library not loaded');
-        showMapError('Places API not loaded. Please refresh the page.');
         return null;
     }
     
@@ -67,7 +85,6 @@ function initializeAutocomplete(input) {
         return autocomplete;
     } catch (error) {
         console.error('Error initializing autocomplete:', error);
-        showMapError('Failed to initialize address autocomplete');
         return null;
     }
 }
@@ -265,72 +282,6 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
     } catch (error) {
         console.error('Error displaying route:', error);
         showMapError('Failed to calculate route. Please check the addresses and try again.');
-    }
-}
-
-function handlePlaceSelection(place, input) {
-    if (!place.geometry) {
-        input.classList.remove('is-valid');
-        input.classList.add('is-invalid');
-        return;
-    }
-    
-    input.classList.remove('is-invalid');
-    input.classList.add('is-valid');
-    
-    if (place.name && place.formatted_address && 
-        !place.formatted_address.startsWith(place.name)) {
-        input.value = `${place.name}, ${place.formatted_address}`;
-    } else {
-        input.value = place.formatted_address;
-    }
-}
-
-async function initMap() {
-    const mapContainer = document.getElementById('map');
-    if (!mapContainer) {
-        console.error('Map container not found');
-        return;
-    }
-    
-    try {
-        // Initialize map centered on Switzerland
-        map = new google.maps.Map(mapContainer, {
-            center: { lat: 46.8182, lng: 8.2275 }, // Switzerland center
-            zoom: 8,
-            mapTypeControl: true,
-            mapTypeControlOptions: {
-                style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-                position: google.maps.ControlPosition.TOP_RIGHT
-            },
-            zoomControl: true,
-            zoomControlOptions: {
-                position: google.maps.ControlPosition.RIGHT_CENTER
-            },
-            scaleControl: true,
-            streetViewControl: true,
-            streetViewControlOptions: {
-                position: google.maps.ControlPosition.RIGHT_TOP
-            },
-            fullscreenControl: true
-        });
-        
-        directionsService = new google.maps.DirectionsService();
-        directionsRenderer = new google.maps.DirectionsRenderer({
-            map: map,
-            suppressMarkers: true
-        });
-        
-        // Initialize Places Autocomplete
-        if (google.maps.places) {
-            document.querySelectorAll('.address-input').forEach(input => {
-                initializeAutocomplete(input);
-            });
-        }
-        
-    } catch (error) {
-        console.error('Error initializing map:', error);
-        showMapError('Failed to initialize Google Maps');
     }
 }
 
