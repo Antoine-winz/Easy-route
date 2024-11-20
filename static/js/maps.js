@@ -54,39 +54,42 @@ function showMapError(message) {
 }
 
 async function addMarker(location, label, isStart = false, isEnd = false, isLoopEnd = false) {
-    if (!map || !location || !google.maps.marker) {
-        console.error('Map or marker library not initialized');
+    if (!map || !location) {
+        console.error('Map not initialized');
         return null;
     }
     
     try {
         let pinColor;
-        let scale;
         let title;
         
         if (isStart) {
             pinColor = "#28a745";
-            scale = 1.2;
             title = "Start";
         } else if (isLoopEnd) {
             pinColor = "#28a745";
-            scale = 1.2;
             title = "Return to Start";
         } else if (isEnd) {
             pinColor = "#dc3545";
-            scale = 1.2;
             title = "End";
         } else {
             pinColor = "#1a73e8";
-            scale = 1;
             title = `Stop ${label}`;
         }
 
-        const marker = new google.maps.marker.AdvancedMarkerElement({
+        const marker = new google.maps.Marker({
             position: location,
             map: map,
+            label: label.toString(),
             title: title,
-            content: buildMarkerContent(label.toString(), pinColor, scale)
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: pinColor,
+                fillOpacity: 1,
+                strokeWeight: 2,
+                strokeColor: '#FFFFFF',
+                scale: 12
+            }
         });
 
         markers.push(marker);

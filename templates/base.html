@@ -121,14 +121,13 @@
     });
     </script>
     {% block scripts %}{% endblock %}
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places"></script>
     <script>
-        function initGoogleMaps() {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key={{ config["GOOGLE_MAPS_API_KEY"] }}&libraries=places,marker&callback=initMap&loading=async`;
-            script.defer = true;
-            document.head.appendChild(script);
-        }
-        document.addEventListener('DOMContentLoaded', initGoogleMaps);
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.google && window.google.maps) {
+                initMap();
+            }
+        });
     </script>
 </body>
 </html>
