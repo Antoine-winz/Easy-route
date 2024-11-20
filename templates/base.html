@@ -65,6 +65,43 @@
             z-index: 1090;
         }
     </style>
+    <script>
+        function initMap() {
+            if (typeof google === 'undefined') {
+                console.error('Google Maps not loaded');
+                return;
+            }
+            
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+            
+            try {
+                window.map = new google.maps.Map(mapContainer, {
+                    center: { lat: 46.8182, lng: 8.2275 },
+                    zoom: 8
+                });
+                
+                window.directionsService = new google.maps.DirectionsService();
+                window.directionsRenderer = new google.maps.DirectionsRenderer({
+                    map: window.map,
+                    suppressMarkers: true
+                });
+                
+                // Initialize Places Autocomplete after map is ready
+                if (google.maps.places) {
+                    document.querySelectorAll('.address-input').forEach(input => {
+                        initializeAutocomplete(input);
+                    });
+                }
+            } catch (error) {
+                console.error('Error initializing map:', error);
+                showMapError('Failed to initialize Google Maps');
+            }
+        }
+    </script>
+    <script defer
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap&v=weekly">
+    </script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light">
@@ -118,8 +155,5 @@
     });
     </script>
     {% block scripts %}{% endblock %}
-    <script async
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap">
-    </script>
 </body>
 </html>

@@ -44,8 +44,8 @@ function initializeAutocomplete(input) {
         };
         
         const autocomplete = new google.maps.places.Autocomplete(input, {
-            types: ['address', 'establishment'],
-            fields: ['formatted_address', 'name', 'place_id', 'geometry'],
+            types: ['address'],
+            fields: ['formatted_address', 'geometry'],
             bounds: switzerlandBounds,
             strictBounds: false,
             componentRestrictions: { country: 'ch' }
@@ -53,7 +53,15 @@ function initializeAutocomplete(input) {
         
         autocomplete.addListener('place_changed', () => {
             const place = autocomplete.getPlace();
-            handlePlaceSelection(place, input);
+            if (!place.geometry) {
+                input.classList.remove('is-valid');
+                input.classList.add('is-invalid');
+                return;
+            }
+            
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            input.value = place.formatted_address;
         });
         
         return autocomplete;
@@ -327,7 +335,7 @@ async function initMap() {
 }
 
 // Export functions for use in other modules
-window.initMap = initMap;
 window.initializeAutocomplete = initializeAutocomplete;
 window.displayRoute = displayRoute;
 window.clearMarkers = clearMarkers;
+window.showMapError = showMapError;
