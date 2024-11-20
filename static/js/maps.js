@@ -12,11 +12,15 @@ function initMap() {
         return;
     }
     
+    if (!window.google || !window.google.maps) {
+        showMapError('Google Maps failed to load. Please check your internet connection and try again.');
+        return;
+    }
+
     try {
         const mapOptions = {
             center: { lat: 46.8182, lng: 8.2275 }, // Switzerland center
-            zoom: 8,
-            mapId: 'DEMO_MAP_ID'
+            zoom: 8
         };
         
         map = new google.maps.Map(mapContainer, mapOptions);
@@ -28,25 +32,22 @@ function initMap() {
             suppressMarkers: true
         });
         
-        // Add a visual check for map loading
-        mapContainer.style.border = '1px solid #ccc';
-        
     } catch (error) {
         console.error('Error initializing map:', error);
-        showMapError();
+        showMapError('Failed to initialize Google Maps. Please refresh the page.');
     }
 }
 
-function showMapError() {
+function showMapError(message) {
     const mapDiv = document.getElementById('map');
     mapDiv.innerHTML = `
         <div class="alert alert-danger" role="alert">
             <h4 class="alert-heading">Map Loading Error</h4>
-            <p>We're unable to load Google Maps at the moment. This might be because:</p>
+            <p>${message}</p>
             <ul>
-                <li>The Google Maps API key is invalid or missing</li>
-                <li>Required Google Maps APIs are not enabled</li>
-                <li>There's a network connectivity issue</li>
+                <li>The Google Maps API key might be invalid or missing</li>
+                <li>Required Google Maps APIs might not be enabled</li>
+                <li>There might be a network connectivity issue</li>
             </ul>
             <p>Please try refreshing the page. If the problem persists, contact support.</p>
         </div>
