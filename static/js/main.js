@@ -226,7 +226,9 @@ document.getElementById('addressForm').addEventListener('submit', async (e) => {
         spinner.classList.remove('d-none');
         showLoadingOverlay('Optimizing route...');
         
-        updateProgress(1, 3); // Geocoding
+        updateProgress(1, 3); // Starting
+        await new Promise(resolve => setTimeout(resolve, 500)); // Add slight delay
+        
         const response = await fetch('/optimize', {
             method: 'POST',
             headers: {

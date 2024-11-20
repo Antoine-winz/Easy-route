@@ -126,10 +126,12 @@ def optimize_route():
 
         # Handle loop route
         if is_loop_route:
-            has_end_point = False  # Override end point if loop route
-            end_point = addresses[0]  # Use start point as end point
-            if addresses[0] not in addresses[1:]:  # Only add if not already present
-                addresses.append(addresses[0])  # Add start point as end point
+            app.logger.info("Processing loop route")
+            has_end_point = False
+            end_point = addresses[0]
+            if addresses[0] != addresses[-1]:
+                app.logger.info("Adding start point as end point for loop route")
+                addresses.append(addresses[0])
         elif has_end_point and not end_point:
             return jsonify({
                 'success': False,

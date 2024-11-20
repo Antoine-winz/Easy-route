@@ -5,6 +5,27 @@ let directionsRenderer;
 let isProcessing = false;
 let mapBounds;
 
+function waitForGoogleMaps() {
+    return new Promise((resolve, reject) => {
+        if (window.google && window.google.maps) {
+            resolve();
+        } else {
+            const checkInterval = setInterval(() => {
+                if (window.google && window.google.maps) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+            
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                reject(new Error('Google Maps failed to load'));
+            }, 10000);
+        }
+    });
+}
+
 function initializeAutocomplete(input) {
     if (!google || !google.maps || !google.maps.places) {
         console.error('Google Maps Places library not loaded');
