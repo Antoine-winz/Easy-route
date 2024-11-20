@@ -117,8 +117,9 @@
         });
     });
     </script>
+    
     <script>
-        function initMap() {
+        window.initMap = function() {
             const mapContainer = document.getElementById('map');
             if (!mapContainer) return;
             
@@ -132,9 +133,18 @@
                 map: window.map,
                 suppressMarkers: true
             });
-        }
+            
+            // Initialize Places Autocomplete
+            if (window.google && window.google.maps && window.google.maps.places) {
+                document.querySelectorAll('.address-input').forEach(input => {
+                    window.initializeAutocomplete(input);
+                });
+            }
+        };
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places"></script>
+    <script async 
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap">
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
