@@ -41,18 +41,19 @@ function initMap() {
 
 function showMapError(message) {
     const mapDiv = document.getElementById('map');
-    mapDiv.innerHTML = `
-        <div class="alert alert-danger" role="alert">
-            <h4 class="alert-heading">Map Loading Error</h4>
-            <p>${message}</p>
-            <ul>
-                <li>The Google Maps API key might be invalid or missing</li>
-                <li>Required Google Maps APIs might not be enabled</li>
-                <li>There might be a network connectivity issue</li>
-            </ul>
-            <p>Please try refreshing the page. If the problem persists, contact support.</p>
-        </div>
-    `;
+    if (mapDiv) {
+        mapDiv.innerHTML = `
+            <div class="alert alert-danger m-3">
+                <h4>Map Loading Error</h4>
+                <p>${message}</p>
+                <p>Please check:</p>
+                <ul>
+                    <li>Internet connection</li>
+                    <li>Google Maps API key configuration</li>
+                </ul>
+            </div>
+        `;
+    }
 }
 
 async function addMarker(location, label, isStart = false, isEnd = false, isLoopEnd = false) {
