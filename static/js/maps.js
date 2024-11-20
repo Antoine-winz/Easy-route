@@ -5,24 +5,23 @@ let directionsRenderer;
 let isProcessing = false;
 let mapBounds;
 
-window.initMap = function() {
+function initMap() {
     const mapContainer = document.getElementById('map');
     if (!mapContainer) return;
     
     try {
-        // Initialize map centered on Switzerland
-        window.map = new google.maps.Map(mapContainer, {
+        map = new google.maps.Map(mapContainer, {
             center: { lat: 46.8182, lng: 8.2275 },
             zoom: 8
         });
         
-        window.directionsService = new google.maps.DirectionsService();
-        window.directionsRenderer = new google.maps.DirectionsRenderer({
-            map: window.map,
+        directionsService = new google.maps.DirectionsService();
+        directionsRenderer = new google.maps.DirectionsRenderer({
+            map: map,
             suppressMarkers: true
         });
         
-        // Initialize Places Autocomplete after map is ready
+        // Initialize Places Autocomplete
         if (google.maps.places) {
             document.querySelectorAll('.address-input').forEach(input => {
                 initializeAutocomplete(input);
@@ -32,7 +31,7 @@ window.initMap = function() {
         console.error('Error initializing map:', error);
         showMapError('Failed to initialize Google Maps');
     }
-};
+}
 
 function initializeAutocomplete(input) {
     if (!google || !google.maps || !google.maps.places) {
@@ -290,8 +289,10 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
     }
 }
 
+// Initialize map when the script loads
+document.addEventListener('DOMContentLoaded', initMap);
+
 // Export necessary functions
-window.initMap = initMap;
 window.initializeAutocomplete = initializeAutocomplete;
 window.displayRoute = displayRoute;
 window.clearMarkers = clearMarkers;
