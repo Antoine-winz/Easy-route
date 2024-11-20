@@ -112,16 +112,24 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
             title = `Stop ${label}`;
         }
 
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-            map,
+        const marker = new google.maps.Marker({
             position: location,
+            map: map,
+            label: {
+                text: label.toString(),
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: 'bold'
+            },
             title: title,
-            content: new google.maps.marker.PinElement({
-                background: pinColor,
-                scale: scale,
-                glyph: label.toString(),
-                glyphColor: '#FFFFFF'
-            })
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: pinColor,
+                fillOpacity: 1,
+                strokeWeight: 2,
+                strokeColor: '#FFFFFF',
+                scale: 15 * (scale || 1)
+            }
         });
 
         markers.push(marker);
@@ -141,7 +149,7 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
 function clearMarkers() {
     markers.forEach(marker => {
         if (marker) {
-            marker.map = null;
+            marker.setMap(null);
         }
     });
     markers = [];
