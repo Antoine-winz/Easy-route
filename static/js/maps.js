@@ -5,7 +5,7 @@ let directionsRenderer;
 let isProcessing = false;
 let mapBounds;
 
-function initMap() {
+async function initMap() {
     const mapContainer = document.getElementById('map');
     if (!mapContainer) return;
     
@@ -54,7 +54,10 @@ function showMapError(message) {
 }
 
 async function addMarker(location, label, isStart = false, isEnd = false, isLoopEnd = false) {
-    if (!map || !location) return null;
+    if (!map || !location || !google.maps.marker) {
+        console.error('Map or marker library not initialized');
+        return null;
+    }
     
     try {
         let pinColor;
@@ -80,8 +83,8 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
         }
 
         const marker = new google.maps.marker.AdvancedMarkerElement({
-            map,
             position: location,
+            map: map,
             title: title,
             content: buildMarkerContent(label.toString(), pinColor, scale)
         });
@@ -119,7 +122,7 @@ function buildMarkerContent(label, color, scale = 1) {
 
 function clearMarkers() {
     markers.forEach(marker => {
-        if (marker) {
+        if (marker && marker.map) {
             marker.map = null;
         }
     });
@@ -186,18 +189,21 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
         }));
 
         // Add markers
-        await Promise.all(locations.map((location, index) => {
-            const isStart = index === 0;
-            const isEnd = index === addresses.length - 1;
+        for (let i = 0; i < locations.length; i++) {
+            const isStart = i === 0;
+            const isEnd = i === addresses.length - 1;
             const isLoopEnd = isLoopRoute && isEnd;
-            return addMarker(
-                location,
-                isLoopEnd ? 1 : index + 1,
+            const marker = await addMarker(
+                locations[i],
+                isLoopEnd ? 1 : i + 1,
                 isStart,
                 isEnd,
                 isLoopEnd
             );
-        }));
+            if (!marker) {
+                console.error(`Failed to create marker for address ${i + 1}`);
+            }
+        }
 
         // Calculate and display route
         const response = await new Promise((resolve, reject) => {
@@ -219,8 +225,8 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
         directionsRenderer.setDirections(response);
         
         // Ensure mapBounds includes all route points
-        response.routes[0].bounds.extend(response.routes[0].bounds);
-        map.fitBounds(response.routes[0].bounds);
+        const bounds = response.routes[0].bounds;
+        map.fitBounds(bounds);
 
         if (totalDistance !== null && totalDuration !== null) {
             updateRouteInfo(totalDistance, totalDuration);
