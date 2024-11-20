@@ -3,61 +3,32 @@ let isOptimizing = false;
 let autocompleteInstances = [];
 
 function initializeAutocomplete(input) {
-    if (!window.google || !window.google.maps || !window.google.maps.places) {
+    if (!google || !google.maps || !google.maps.places) {
         console.error('Google Maps Places library not loaded');
-        return null;
+        return;
     }
     
     try {
-        const switzerlandBounds = {
-            north: 47.8084,
-            south: 45.8179,
-            west: 5.9559,
-            east: 10.4921
-        };
-        
         const autocomplete = new google.maps.places.Autocomplete(input, {
             types: ['address', 'establishment'],
-            fields: ['formatted_address', 'geometry', 'name'],
-            bounds: switzerlandBounds,
-            componentRestrictions: { country: 'ch' }
+            fields: ['formatted_address', 'name', 'place_id']
         });
         
         autocomplete.addListener('place_changed', () => {
             const place = autocomplete.getPlace();
-            handlePlaceSelection(place, input);
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            
+            if (place.name && place.formatted_address && 
+                !place.formatted_address.startsWith(place.name)) {
+                input.value = `${place.name}, ${place.formatted_address}`;
+            }
         });
         
-        return autocomplete;
+        autocompleteInstances.push(autocomplete);
     } catch (error) {
         console.error('Error initializing autocomplete:', error);
-        return null;
     }
-}
-
-// Ensure first input gets autocomplete
-document.addEventListener('DOMContentLoaded', function() {
-    const firstInput = document.querySelector('.address-input');
-    if (firstInput) {
-        setTimeout(() => {
-            const autocomplete = initializeAutocomplete(firstInput);
-            if (autocomplete) {
-                console.log('Initialized autocomplete for first input');
-            }
-        }, 1000); // Give Maps API time to load
-    }
-});
-
-function handlePlaceSelection(place, input) {
-    if (!place.geometry) {
-        input.classList.remove('is-valid');
-        input.classList.add('is-invalid');
-        return;
-    }
-    
-    input.classList.remove('is-invalid');
-    input.classList.add('is-valid');
-    input.value = place.formatted_address;
 }
 
 function updateProgress(step, total = 3) {
@@ -138,24 +109,8 @@ document.addEventListener('DOMContentLoaded', function() {
         firstInput.placeholder = 'Enter starting point address';
         firstInput.setAttribute('data-bs-toggle', 'tooltip');
         firstInput.setAttribute('data-bs-title', 'This will be your route starting point');
+        initializeAutocomplete(firstInput);
     }
-
-    // Add observer for dynamically added inputs
-    const observer = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
-            mutation.addedNodes.forEach(node => {
-                if (node.nodeType === 1) { // ELEMENT_NODE
-                    const inputs = node.querySelectorAll('.address-input');
-                    inputs.forEach(input => initializeAutocomplete(input));
-                }
-            });
-        });
-    });
-
-    observer.observe(document.getElementById('addressInputs'), {
-        childList: true,
-        subtree: true
-    });
 });
 
 document.getElementById('addAddress').addEventListener('click', () => {

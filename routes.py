@@ -162,7 +162,7 @@ def optimize_route():
 
         # Geocode addresses using Google Maps Geocoding API
         app.logger.info("Starting geocoding process")
-        api_key = app.config['AIzaSyDeYxW4GYvQ6vFMxgeYUtES8F202X7A9BI']
+        api_key = app.config['GOOGLE_MAPS_API_KEY']
         geocoded_addresses = []
         coordinates = []
         
