@@ -50,8 +50,6 @@ function initializeAllAutocompletes() {
     });
 }
 
-window.initMap = initMap;
-
 function initializeAutocomplete(input) {
     if (!google || !google.maps || !google.maps.places) {
         console.error('Google Maps Places library not loaded');
@@ -138,44 +136,48 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
             title = `Stop ${label}`;
         }
 
-        const marker = new google.maps.Marker({
+        const markerView = new google.maps.marker.AdvancedMarkerElement({
+            map,
             position: location,
-            map: map,
-            label: {
-                text: label.toString(),
-                color: '#FFFFFF',
-                fontSize: '14px',
-                fontWeight: 'bold'
-            },
             title: title,
-            icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                fillColor: pinColor,
-                fillOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: '#FFFFFF',
-                scale: 15 * (scale || 1)
-            }
+            content: buildMarkerContent(label.toString(), pinColor, scale)
         });
 
-        markers.push(marker);
+        markers.push(markerView);
         
         if (!mapBounds) {
             mapBounds = new google.maps.LatLngBounds();
         }
         mapBounds.extend(location);
         
-        return marker;
+        return markerView;
     } catch (error) {
         console.error('Error creating marker:', error);
         return null;
     }
 }
 
+function buildMarkerContent(label, color, scale = 1) {
+    const div = document.createElement('div');
+    div.style.width = `${30 * scale}px`;
+    div.style.height = `${30 * scale}px`;
+    div.style.borderRadius = '50%';
+    div.style.backgroundColor = color;
+    div.style.border = '2px solid white';
+    div.style.display = 'flex';
+    div.style.justifyContent = 'center';
+    div.style.alignItems = 'center';
+    div.style.color = 'white';
+    div.style.fontWeight = 'bold';
+    div.style.fontSize = '14px';
+    div.textContent = label;
+    return div;
+}
+
 function clearMarkers() {
     markers.forEach(marker => {
         if (marker) {
-            marker.setMap(null);
+            marker.map = null;
         }
     });
     markers = [];
@@ -183,6 +185,8 @@ function clearMarkers() {
     if (directionsRenderer) {
         directionsRenderer.setDirections({routes: []});
     }
+    
+    mapBounds = null;
 }
 
 function formatDistance(meters) {
@@ -225,38 +229,38 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
 
     // Geocode addresses and create markers
     const geocoder = new google.maps.Geocoder();
-    for (let i = 0; i < addresses.length; i++) {
-        try {
-            const result = await new Promise((resolve, reject) => {
-                geocoder.geocode({ address: addresses[i] }, (results, status) => {
-                    if (status === 'OK') resolve(results[0].geometry.location);
-                    else reject(new Error(`Geocoding failed: ${status}`));
-                });
+    const geocodePromises = addresses.map((address, index) => {
+        return new Promise((resolve, reject) => {
+            geocoder.geocode({ address }, (results, status) => {
+                if (status === 'OK') {
+                    const location = results[0].geometry.location;
+                    const isStart = index === 0;
+                    const isEnd = index === addresses.length - 1;
+                    const isLoopEnd = isLoopRoute && isEnd;
+                    
+                    addMarker(
+                        location,
+                        isLoopEnd ? 1 : index + 1,
+                        isStart,
+                        isEnd,
+                        isLoopEnd
+                    ).then(marker => {
+                        if (marker) {
+                            resolve(location);
+                        } else {
+                            reject(new Error(`Failed to create marker for address ${index + 1}`));
+                        }
+                    });
+                } else {
+                    reject(new Error(`Geocoding failed: ${status}`));
+                }
             });
-            
-            const isStart = i === 0;
-            const isEnd = i === addresses.length - 1;
-            const isLoopEnd = isLoopRoute && isEnd;
-            
-            const marker = await addMarker(
-                result,
-                isLoopEnd ? 1 : i + 1,
-                isStart,
-                isEnd,
-                isLoopEnd
-            );
-
-            if (!marker) {
-                console.error(`Failed to create marker for address ${i + 1}`);
-            }
-        } catch (error) {
-            console.error(`Error processing address ${i + 1}:`, error);
-            showMapError(`Failed to process address: ${addresses[i]}`);
-            continue;
-        }
-    }
+        });
+    });
 
     try {
+        await Promise.all(geocodePromises);
+
         const response = await new Promise((resolve, reject) => {
             directionsService.route({
                 origin: addresses[0],
@@ -275,11 +279,23 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
 
         directionsRenderer.setDirections(response);
         
-        // Extend bounds with route bounds
+        // Make sure mapBounds is properly initialized
+        if (!mapBounds) {
+            mapBounds = new google.maps.LatLngBounds();
+        }
+        
+        // Include route bounds
         const routeBounds = response.routes[0].bounds;
         mapBounds.union(routeBounds);
         
-        map.fitBounds(mapBounds);
+        // Ensure the bounds are valid before fitting
+        if (!mapBounds.isEmpty()) {
+            map.fitBounds(mapBounds);
+        } else {
+            console.warn('Empty bounds, using default center');
+            map.setCenter({ lat: 46.8182, lng: 8.2275 });
+            map.setZoom(8);
+        }
 
         if (totalDistance !== null && totalDuration !== null) {
             updateRouteInfo(totalDistance, totalDuration);
@@ -290,7 +306,8 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
     }
 }
 
-// Export functions for use in other modules
+// Export necessary functions
+window.initMap = initMap;
 window.initializeAutocomplete = initializeAutocomplete;
 window.displayRoute = displayRoute;
 window.clearMarkers = clearMarkers;
