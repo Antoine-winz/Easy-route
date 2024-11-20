@@ -67,30 +67,39 @@ function hideLoadingOverlay() {
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize loop route checkbox handler
-    document.getElementById('isLoopRoute').addEventListener('change', function() {
-        const endPointSection = document.getElementById('endPointSection');
-        const endPointInput = document.getElementById('endPointInput');
-        const hasEndPoint = document.getElementById('hasEndPoint');
-        
+    const loopRouteCheckbox = document.getElementById('isLoopRoute');
+    const endPointSection = document.getElementById('endPointSection');
+    const endPointInput = document.getElementById('endPointInput');
+    const hasEndPoint = document.getElementById('hasEndPoint');
+    
+    loopRouteCheckbox.addEventListener('change', function() {
         if (this.checked) {
             endPointSection.style.display = 'none';
             endPointInput.style.display = 'none';
             hasEndPoint.checked = false;
+            
+            // Clear any existing end point input
+            const endPointInputField = endPointInput.querySelector('.address-input');
+            if (endPointInputField) {
+                endPointInputField.value = '';
+                endPointInputField.classList.remove('is-valid', 'is-invalid');
+            }
         } else {
             endPointSection.style.display = 'block';
         }
     });
 
     // Initialize end point checkbox handler
-    document.getElementById('hasEndPoint').addEventListener('change', function() {
-        const endPointInput = document.getElementById('endPointInput');
-        endPointInput.style.display = this.checked ? 'block' : 'none';
+    hasEndPoint.addEventListener('change', function() {
         const input = endPointInput.querySelector('.address-input');
+        endPointInput.style.display = this.checked ? 'block' : 'none';
         if (this.checked) {
             initializeAutocomplete(input);
             input.required = true;
         } else {
             input.required = false;
+            input.value = '';
+            input.classList.remove('is-valid', 'is-invalid');
         }
     });
 
