@@ -119,31 +119,18 @@
     </script>
     
     <script>
-        window.initMap = function() {
-            const mapContainer = document.getElementById('map');
-            if (!mapContainer) return;
-            
-            window.map = new google.maps.Map(mapContainer, {
-                center: { lat: 46.8182, lng: 8.2275 },
-                zoom: 8
-            });
-            
-            window.directionsService = new google.maps.DirectionsService();
-            window.directionsRenderer = new google.maps.DirectionsRenderer({
-                map: window.map,
-                suppressMarkers: true
-            });
-            
-            // Initialize Places Autocomplete
-            if (window.google && window.google.maps && window.google.maps.places) {
-                document.querySelectorAll('.address-input').forEach(input => {
-                    window.initializeAutocomplete(input);
-                });
-            }
-        };
-    </script>
-    <script async 
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap">
+        function loadGoogleMapsScript() {
+            const script = document.createElement('script');
+            script.src = 'https://maps.googleapis.com/maps/api/js?key={{ config["GOOGLE_MAPS_API_KEY"] }}&libraries=places&loading=async';
+            script.async = true;
+            script.onload = function() {
+                if (typeof google !== 'undefined' && google.maps) {
+                    initMap();
+                }
+            };
+            document.head.appendChild(script);
+        }
+        document.addEventListener('DOMContentLoaded', loadGoogleMapsScript);
     </script>
     {% block scripts %}{% endblock %}
 </body>
