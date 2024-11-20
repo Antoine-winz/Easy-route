@@ -5,11 +5,9 @@ let directionsRenderer;
 let isProcessing = false;
 let mapBounds;
 
-function waitForGoogleMaps() {
-    return new Promise((resolve, reject) => {
-        if (window.google && window.google.maps) {
-            resolve();
-        } else {
+async function initializeGoogleMaps() {
+    try {
+        await new Promise((resolve, reject) => {
             const checkInterval = setInterval(() => {
                 if (window.google && window.google.maps) {
                     clearInterval(checkInterval);
@@ -17,19 +15,24 @@ function waitForGoogleMaps() {
                 }
             }, 100);
             
-            // Timeout after 10 seconds
             setTimeout(() => {
                 clearInterval(checkInterval);
                 reject(new Error('Google Maps failed to load'));
             }, 10000);
-        }
-    });
+        });
+        
+        return true;
+    } catch (error) {
+        console.error('Error loading Google Maps:', error);
+        return false;
+    }
 }
 
 function initializeAutocomplete(input) {
-    if (!google || !google.maps || !google.maps.places) {
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
         console.error('Google Maps Places library not loaded');
-        return;
+        showMapError('Places API not loaded. Please refresh the page.');
+        return null;
     }
     
     try {
@@ -60,6 +63,7 @@ function initializeAutocomplete(input) {
         return autocomplete;
     } catch (error) {
         console.error('Error initializing autocomplete:', error);
+        showMapError('Failed to initialize address autocomplete');
         return null;
     }
 }
@@ -69,12 +73,13 @@ function showMapError(message) {
     if (mapDiv) {
         mapDiv.innerHTML = `
             <div class="alert alert-danger m-3">
-                <h4>Map Loading Error</h4>
+                <h4>Map Error</h4>
                 <p>${message}</p>
-                <p>Please check:</p>
+                <p>Please try:</p>
                 <ul>
-                    <li>Internet connection</li>
-                    <li>Google Maps API key configuration</li>
+                    <li>Refreshing the page</li>
+                    <li>Checking your internet connection</li>
+                    <li>Verifying the API key configuration</li>
                 </ul>
             </div>
         `;
@@ -82,7 +87,7 @@ function showMapError(message) {
 }
 
 async function addMarker(location, label, isStart = false, isEnd = false, isLoopEnd = false) {
-    if (!map) return;
+    if (!map || !location) return null;
     
     try {
         let pinColor;
@@ -90,27 +95,33 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
         let title;
         
         if (isStart) {
-            pinColor = "#28a745"; // Green for start
+            pinColor = "#28a745";
             scale = 1.2;
             title = "Start";
         } else if (isLoopEnd) {
-            pinColor = "#28a745"; // Green for loop end (same as start)
+            pinColor = "#28a745";
             scale = 1.2;
             title = "Return to Start";
         } else if (isEnd) {
-            pinColor = "#dc3545"; // Red for end
+            pinColor = "#dc3545";
             scale = 1.2;
             title = "End";
         } else {
-            pinColor = "#1a73e8"; // Blue for waypoints
+            pinColor = "#1a73e8";
             scale = 1;
             title = `Stop ${label}`;
         }
 
+        const markerElement = document.createElement('div');
         const marker = new google.maps.Marker({
             map,
             position: location,
-            label: label.toString(),
+            label: {
+                text: label.toString(),
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: 'bold'
+            },
             title: title,
             icon: {
                 path: google.maps.SymbolPath.CIRCLE,
@@ -122,33 +133,42 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
             }
         });
 
-        // Add tooltip
-        const tooltip = new bootstrap.Tooltip(marker.element, {
-            title: marker.title,
-            placement: 'top'
-        });
-
+        marker.element = markerElement;
         markers.push(marker);
+
         if (!mapBounds) {
             mapBounds = new google.maps.LatLngBounds();
         }
         mapBounds.extend(location);
-        map.fitBounds(mapBounds);
+        
+        // Add hover effect
+        marker.addListener('mouseover', () => {
+            marker.setAnimation(google.maps.Animation.BOUNCE);
+        });
+        
+        marker.addListener('mouseout', () => {
+            marker.setAnimation(null);
+        });
+
+        return marker;
     } catch (error) {
         console.error('Error creating marker:', error);
+        return null;
     }
 }
 
 function clearMarkers() {
     markers.forEach(marker => {
         if (marker) {
-            if (marker.setMap) marker.setMap(null);
-            // Cleanup any tooltips
-            const tooltip = bootstrap.Tooltip.getInstance(marker.element);
-            if (tooltip) tooltip.dispose();
+            marker.setMap(null);
+            if (marker.element) {
+                const tooltip = bootstrap.Tooltip.getInstance(marker.element);
+                if (tooltip) tooltip.dispose();
+            }
         }
     });
     markers = [];
+    
     if (directionsRenderer) {
         directionsRenderer.setDirections({routes: []});
     }
@@ -158,20 +178,17 @@ function clearMarkers() {
 }
 
 function formatDistance(meters) {
-    if (meters < 1000) {
-        return `${Math.round(meters)} m`;
-    }
-    return `${(meters / 1000).toFixed(1)} km`;
+    return meters < 1000 ? 
+        `${Math.round(meters)} m` : 
+        `${(meters / 1000).toFixed(1)} km`;
 }
 
 function formatDuration(seconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    
-    if (hours > 0) {
-        return `${hours} hr ${minutes} min`;
-    }
-    return `${minutes} min`;
+    return hours > 0 ? 
+        `${hours} hr ${minutes} min` : 
+        `${minutes} min`;
 }
 
 function updateRouteInfo(totalDistance, totalDuration) {
@@ -179,22 +196,27 @@ function updateRouteInfo(totalDistance, totalDuration) {
     const totalDistanceElement = document.getElementById('totalDistance');
     const totalDurationElement = document.getElementById('totalDuration');
     
-    totalDistanceElement.innerHTML = `<i class="fas fa-road"></i> Total Distance: ${formatDistance(totalDistance)}`;
-    totalDurationElement.innerHTML = `<i class="fas fa-clock"></i> Estimated Time: ${formatDuration(totalDuration)}`;
-    routeInfo.style.display = 'block';
+    if (routeInfo && totalDistanceElement && totalDurationElement) {
+        totalDistanceElement.innerHTML = `<i class="fas fa-road"></i> Total Distance: ${formatDistance(totalDistance)}`;
+        totalDurationElement.innerHTML = `<i class="fas fa-clock"></i> Estimated Time: ${formatDuration(totalDuration)}`;
+        routeInfo.style.display = 'block';
+    }
 }
 
 async function displayRoute(addresses, totalDistance = null, totalDuration = null) {
-    if (!directionsService || !directionsRenderer || addresses.length < 2) return;
+    if (!directionsService || !directionsRenderer || !addresses || addresses.length < 2) {
+        console.error('Invalid route parameters');
+        return;
+    }
 
     clearMarkers();
     
     const isLoopRoute = addresses.length >= 2 && 
                        addresses[0] === addresses[addresses.length - 1];
 
-    // First, geocode all addresses and create markers
+    // Geocode addresses and create markers
+    const geocoder = new google.maps.Geocoder();
     for (let i = 0; i < addresses.length; i++) {
-        const geocoder = new google.maps.Geocoder();
         try {
             const result = await new Promise((resolve, reject) => {
                 geocoder.geocode({ address: addresses[i] }, (results, status) => {
@@ -207,33 +229,34 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
             const isEnd = i === addresses.length - 1;
             const isLoopEnd = isLoopRoute && isEnd;
             
-            await addMarker(
+            const marker = await addMarker(
                 result,
-                isLoopEnd ? 1 : i + 1, // For loop routes, use 1 for the end marker
+                isLoopEnd ? 1 : i + 1,
                 isStart,
                 isEnd,
                 isLoopEnd
             );
+
+            if (!marker) {
+                console.error(`Failed to create marker for address ${i + 1}`);
+            }
         } catch (error) {
-            console.error(`Error creating marker for address ${i + 1}:`, error);
+            console.error(`Error processing address ${i + 1}:`, error);
+            showMapError(`Failed to process address: ${addresses[i]}`);
             continue;
         }
     }
 
-    // Then calculate and display the route
+    // Calculate and display route
     try {
-        const origin = addresses[0];
-        const destination = addresses[addresses.length - 1];
-        const waypoints = addresses.slice(1, -1).map(address => ({
-            location: address,
-            stopover: true
-        }));
-
         const response = await new Promise((resolve, reject) => {
             directionsService.route({
-                origin: origin,
-                destination: destination,
-                waypoints: waypoints,
+                origin: addresses[0],
+                destination: addresses[addresses.length - 1],
+                waypoints: addresses.slice(1, -1).map(address => ({
+                    location: address,
+                    stopover: true
+                })),
                 optimizeWaypoints: false,
                 travelMode: google.maps.TravelMode.DRIVING
             }, (result, status) => {
@@ -243,46 +266,73 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
         });
 
         directionsRenderer.setDirections(response);
-        if (mapBounds) {
-            map.fitBounds(mapBounds);
+        
+        if (mapBounds && mapBounds.isEmpty()) {
+            response.routes[0].bounds.forEach(coord => mapBounds.extend(coord));
         }
+        
+        map.fitBounds(mapBounds);
 
-        // Update route information if provided
         if (totalDistance !== null && totalDuration !== null) {
             updateRouteInfo(totalDistance, totalDuration);
         }
     } catch (error) {
         console.error('Error displaying route:', error);
-        showErrorAlert('Failed to calculate route. Please check the addresses and try again.');
+        showMapError('Failed to calculate route. Please check the addresses and try again.');
     }
 }
 
-function initMap() {
+async function initMap() {
     const mapContainer = document.getElementById('map');
     if (!mapContainer) {
         console.error('Map container not found');
         return;
     }
     
-    if (!window.google || !window.google.maps) {
-        showMapError('Google Maps failed to load. Please check your internet connection and try again.');
-        return;
-    }
-
     try {
+        const mapsLoaded = await initializeGoogleMaps();
+        if (!mapsLoaded) {
+            showMapError('Failed to load Google Maps. Please refresh the page.');
+            return;
+        }
+
         const mapOptions = {
-            center: { lat: 46.8182, lng: 8.2275 }, // Switzerland center
-            zoom: 8
+            center: { lat: 46.8182, lng: 8.2275 },
+            zoom: 8,
+            mapTypeControl: true,
+            mapTypeControlOptions: {
+                style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+                position: google.maps.ControlPosition.TOP_RIGHT
+            },
+            zoomControl: true,
+            zoomControlOptions: {
+                position: google.maps.ControlPosition.RIGHT_CENTER
+            },
+            scaleControl: true,
+            streetViewControl: true,
+            streetViewControlOptions: {
+                position: google.maps.ControlPosition.RIGHT_TOP
+            },
+            fullscreenControl: true
         };
         
         map = new google.maps.Map(mapContainer, mapOptions);
         
-        // Initialize services after map is created
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer({
             map: map,
             suppressMarkers: true,
-            preserveViewport: false
+            preserveViewport: false,
+            polylineOptions: {
+                strokeColor: '#1a73e8',
+                strokeWeight: 4,
+                strokeOpacity: 0.8
+            }
+        });
+        
+        // Initialize existing address inputs
+        document.querySelectorAll('.address-input').forEach(input => {
+            initializeAutocomplete(input);
         });
         
     } catch (error) {
@@ -290,3 +340,9 @@ function initMap() {
         showMapError('Failed to initialize Google Maps. Please refresh the page.');
     }
 }
+
+// Export functions for use in other modules
+window.initMap = initMap;
+window.initializeAutocomplete = initializeAutocomplete;
+window.displayRoute = displayRoute;
+window.clearMarkers = clearMarkers;
