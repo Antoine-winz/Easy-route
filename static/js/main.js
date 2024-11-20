@@ -4,11 +4,20 @@ let autocompleteInstances = [];
 
 function initializeAutocomplete(input) {
     const autocomplete = new google.maps.places.Autocomplete(input, {
-        types: ['address']
+        types: ['address', 'establishment'],
+        fields: ['formatted_address', 'name', 'place_id']
     });
+    
     autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
         input.classList.remove('is-invalid');
         input.classList.add('is-valid');
+        
+        // If it's a place (establishment), prefix with place name
+        if (place.name && place.formatted_address && 
+            !place.formatted_address.startsWith(place.name)) {
+            input.value = `${place.name}, ${place.formatted_address}`;
+        }
     });
     autocompleteInstances.push(autocomplete);
 }
