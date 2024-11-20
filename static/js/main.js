@@ -3,23 +3,32 @@ let isOptimizing = false;
 let autocompleteInstances = [];
 
 function initializeAutocomplete(input) {
-    const autocomplete = new google.maps.places.Autocomplete(input, {
-        types: ['address', 'establishment'],
-        fields: ['formatted_address', 'name', 'place_id']
-    });
+    if (!google || !google.maps || !google.maps.places) {
+        console.error('Google Maps Places library not loaded');
+        return;
+    }
     
-    autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        input.classList.remove('is-invalid');
-        input.classList.add('is-valid');
+    try {
+        const autocomplete = new google.maps.places.Autocomplete(input, {
+            types: ['address', 'establishment'],
+            fields: ['formatted_address', 'name', 'place_id']
+        });
         
-        // If it's a place (establishment), prefix with place name
-        if (place.name && place.formatted_address && 
-            !place.formatted_address.startsWith(place.name)) {
-            input.value = `${place.name}, ${place.formatted_address}`;
-        }
-    });
-    autocompleteInstances.push(autocomplete);
+        autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            
+            if (place.name && place.formatted_address && 
+                !place.formatted_address.startsWith(place.name)) {
+                input.value = `${place.name}, ${place.formatted_address}`;
+            }
+        });
+        
+        autocompleteInstances.push(autocomplete);
+    } catch (error) {
+        console.error('Error initializing autocomplete:', error);
+    }
 }
 
 function updateProgress(step, total = 3) {

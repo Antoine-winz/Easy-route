@@ -70,8 +70,17 @@
             z-index: 1090;
         }
     </style>
-    <script async defer
-      src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places,marker&callback=initMap&loading=async">
+    <script>
+    function initializeGoogleMaps() {
+        if (typeof google === 'undefined') {
+            console.error('Google Maps not loaded');
+            return;
+        }
+        initMap();
+    }
+    </script>
+    <script async
+      src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initializeGoogleMaps">
     </script>
 </head>
 <body>
