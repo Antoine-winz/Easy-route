@@ -36,28 +36,24 @@ function initializeAutocomplete(input) {
     }
     
     try {
+        const switzerlandBounds = {
+            north: 47.8084,
+            south: 45.8179,
+            west: 5.9559,
+            east: 10.4921
+        };
+        
         const autocomplete = new google.maps.places.Autocomplete(input, {
             types: ['address', 'establishment'],
-            fields: ['formatted_address', 'name', 'place_id', 'geometry']
+            fields: ['formatted_address', 'name', 'place_id', 'geometry'],
+            bounds: switzerlandBounds,
+            strictBounds: false,
+            componentRestrictions: { country: 'ch' }
         });
         
         autocomplete.addListener('place_changed', () => {
             const place = autocomplete.getPlace();
-            if (!place.geometry) {
-                input.classList.remove('is-valid');
-                input.classList.add('is-invalid');
-                return;
-            }
-            
-            input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-            
-            if (place.name && place.formatted_address && 
-                !place.formatted_address.startsWith(place.name)) {
-                input.value = `${place.name}, ${place.formatted_address}`;
-            } else {
-                input.value = place.formatted_address;
-            }
+            handlePlaceSelection(place, input);
         });
         
         return autocomplete;
@@ -112,24 +108,32 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
             title = `Stop ${label}`;
         }
 
-        const marker = new google.maps.Marker({
-            position: location,
+        const position = location instanceof google.maps.LatLng ? location : new google.maps.LatLng(location);
+        
+        const markerContent = document.createElement('div');
+        markerContent.className = 'custom-marker';
+        markerContent.innerHTML = `
+            <div style="
+                background-color: ${pinColor};
+                border: 2px solid #FFFFFF;
+                border-radius: 50%;
+                width: ${30 * (scale || 1)}px;
+                height: ${30 * (scale || 1)}px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #FFFFFF;
+                font-weight: bold;
+                font-size: 14px;">
+                ${label}
+            </div>
+        `;
+
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+            position: position,
             map: map,
-            label: {
-                text: label.toString(),
-                color: '#FFFFFF',
-                fontSize: '14px',
-                fontWeight: 'bold'
-            },
             title: title,
-            icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                fillColor: pinColor,
-                fillOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: '#FFFFFF',
-                scale: 15 * (scale || 1)
-            }
+            content: markerContent
         });
 
         markers.push(marker);
@@ -137,7 +141,7 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
         if (!mapBounds) {
             mapBounds = new google.maps.LatLngBounds();
         }
-        mapBounds.extend(location);
+        mapBounds.extend(position);
         
         return marker;
     } catch (error) {
@@ -149,7 +153,7 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
 function clearMarkers() {
     markers.forEach(marker => {
         if (marker) {
-            marker.setMap(null);
+            marker.map = null;
         }
     });
     markers = [];
@@ -267,6 +271,24 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
     }
 }
 
+function handlePlaceSelection(place, input) {
+    if (!place.geometry) {
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+        return;
+    }
+    
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    
+    if (place.name && place.formatted_address && 
+        !place.formatted_address.startsWith(place.name)) {
+        input.value = `${place.name}, ${place.formatted_address}`;
+    } else {
+        input.value = place.formatted_address;
+    }
+}
+
 async function initMap() {
     const mapContainer = document.getElementById('map');
     if (!mapContainer) {
@@ -275,9 +297,9 @@ async function initMap() {
     }
     
     try {
-        // Initialize the map first
+        // Initialize map centered on Switzerland
         map = new google.maps.Map(mapContainer, {
-            center: { lat: 46.8182, lng: 8.2275 },
+            center: { lat: 46.8182, lng: 8.2275 }, // Switzerland center
             zoom: 8,
             mapTypeControl: true,
             mapTypeControlOptions: {
@@ -296,28 +318,17 @@ async function initMap() {
             fullscreenControl: true
         });
         
-        // Initialize services after map is loaded
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer({
             map: map,
-            suppressMarkers: true,
-            preserveViewport: false,
-            polylineOptions: {
-                strokeColor: '#1a73e8',
-                strokeWeight: 4,
-                strokeOpacity: 0.8
-            }
+            suppressMarkers: true
         });
         
-        // Wait for Places library to be fully loaded
+        // Initialize Places Autocomplete
         if (google.maps.places) {
-            // Initialize autocomplete for all address inputs
             document.querySelectorAll('.address-input').forEach(input => {
                 initializeAutocomplete(input);
             });
-        } else {
-            console.error('Places library not loaded');
-            showMapError('Places API failed to load');
         }
         
     } catch (error) {

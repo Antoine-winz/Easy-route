@@ -118,55 +118,14 @@
     });
     </script>
     {% block scripts %}{% endblock %}
-    <script async
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&v=weekly&callback=initMap">
-    </script>
     <script>
-        // Initialize and add the map
-        function initMap() {
-            // The location of Uluru
-            const uluru = { lat: -25.344, lng: 131.036 };
-            // The map, centered at Uluru
-            const map = new google.maps.Map(document.getElementById("map"), {
-                zoom: 4,
-                center: uluru,
-            });
-            // The marker, positioned at Uluru
-            const marker = new google.maps.Marker({
-                position: uluru,
-                map: map,
-            });
-            // Initialize Places Autocomplete after map is ready
-            if (google.maps.places) {
-                document.querySelectorAll('.address-input').forEach(input => {
-                    initializeAutocomplete(input);
-                });
-            }
+        function loadGoogleMaps() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap&loading=async`;
+            script.async = true;
+            document.head.appendChild(script);
         }
-        function initializeAutocomplete(input) {
-            const autocomplete = new google.maps.places.Autocomplete(input, { types: ['establishment'] });
-            autocomplete.addListener('place_changed', function() {
-                const place = autocomplete.getPlace();
-                if (!place.geometry) {
-                    // User entered the name of a Place that was not suggested and
-                    // selected the prediction (in the Autocomplete dropdown),
-                    // but there were no results for that name.
-                    window.alert("Please select a valid place.");
-                    return;
-                }
-                // Get the place details from the autocomplete object
-                const placeDetails = {
-                    name: place.name,
-                    address: place.formatted_address,
-                    latitude: place.geometry.location.lat(),
-                    longitude: place.geometry.location.lng()
-                };
-                // Update the input field with the selected place details
-                input.value = placeDetails.address;
-                // Do something with the place details (e.g., display them on a map)
-                console.log(placeDetails);
-            });
-        }
+        window.addEventListener('load', loadGoogleMaps);
     </script>
 </body>
 </html>
