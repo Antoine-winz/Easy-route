@@ -289,11 +289,9 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
     }
 }
 
-// Initialize map when the script loads
-document.addEventListener('DOMContentLoaded', initMap);
-
 // Export necessary functions
 window.initializeAutocomplete = initializeAutocomplete;
 window.displayRoute = displayRoute;
 window.clearMarkers = clearMarkers;
 window.showMapError = showMapError;
+window.initMap = initMap;  // Make initMap available globally for the callback
