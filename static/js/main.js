@@ -5,14 +5,22 @@ let autocompleteInstances = [];
 function initializeAutocomplete(input) {
     if (!window.google || !window.google.maps || !window.google.maps.places) {
         console.error('Google Maps Places library not loaded');
-        setTimeout(() => initializeAutocomplete(input), 1000); // Retry after 1s
         return null;
     }
     
     try {
+        const switzerlandBounds = {
+            north: 47.8084,
+            south: 45.8179,
+            west: 5.9559,
+            east: 10.4921
+        };
+        
         const autocomplete = new google.maps.places.Autocomplete(input, {
-            types: ['address'],
-            fields: ['formatted_address', 'geometry']
+            types: ['address', 'establishment'],
+            fields: ['formatted_address', 'geometry', 'name'],
+            bounds: switzerlandBounds,
+            componentRestrictions: { country: 'ch' }
         });
         
         autocomplete.addListener('place_changed', () => {
@@ -26,6 +34,19 @@ function initializeAutocomplete(input) {
         return null;
     }
 }
+
+// Ensure first input gets autocomplete
+document.addEventListener('DOMContentLoaded', function() {
+    const firstInput = document.querySelector('.address-input');
+    if (firstInput) {
+        setTimeout(() => {
+            const autocomplete = initializeAutocomplete(firstInput);
+            if (autocomplete) {
+                console.log('Initialized autocomplete for first input');
+            }
+        }, 1000); // Give Maps API time to load
+    }
+});
 
 function handlePlaceSelection(place, input) {
     if (!place.geometry) {
