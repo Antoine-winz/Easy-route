@@ -29,7 +29,8 @@ function initMap() {
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer({
             map: map,
-            suppressMarkers: true
+            suppressMarkers: true,
+            preserveViewport: false
         });
         
     } catch (error) {
@@ -54,28 +55,36 @@ function showMapError(message) {
     `;
 }
 
-async function addMarker(location, label, isStart = false, isEnd = false) {
+async function addMarker(location, label, isStart = false, isEnd = false, isLoopEnd = false) {
     if (!map) return;
     
     try {
         let pinColor;
         let scale;
+        let title;
         
         if (isStart) {
             pinColor = "#28a745"; // Green for start
             scale = 1.2;
+            title = "Start";
+        } else if (isLoopEnd) {
+            pinColor = "#28a745"; // Green for loop end (same as start)
+            scale = 1.2;
+            title = "Return to Start";
         } else if (isEnd) {
             pinColor = "#dc3545"; // Red for end
             scale = 1.2;
+            title = "End";
         } else {
             pinColor = "#1a73e8"; // Blue for waypoints
             scale = 1;
+            title = `Stop ${label}`;
         }
 
         const marker = new google.maps.marker.AdvancedMarkerElement({
             map,
             position: location,
-            title: isStart ? "Start" : (isEnd ? "End" : `Stop ${label}`),
+            title: title,
             content: new google.maps.marker.PinElement({
                 glyph: label.toString(),
                 glyphColor: "#ffffff",
@@ -151,6 +160,9 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
     if (!directionsService || !directionsRenderer || addresses.length < 2) return;
 
     clearMarkers();
+    
+    const isLoopRoute = addresses.length >= 2 && 
+                       addresses[0] === addresses[addresses.length - 1];
 
     // First, geocode all addresses and create markers
     for (let i = 0; i < addresses.length; i++) {
@@ -162,11 +174,17 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
                     else reject(new Error(`Geocoding failed: ${status}`));
                 });
             });
+            
+            const isStart = i === 0;
+            const isEnd = i === addresses.length - 1;
+            const isLoopEnd = isLoopRoute && isEnd;
+            
             await addMarker(
-                result, 
-                i + 1, 
-                i === 0, // isStart
-                i === addresses.length - 1 // isEnd
+                result,
+                isLoopEnd ? 1 : i + 1, // For loop routes, use 1 for the end marker
+                isStart,
+                isEnd,
+                isLoopEnd
             );
         } catch (error) {
             console.error(`Error creating marker for address ${i + 1}:`, error);
