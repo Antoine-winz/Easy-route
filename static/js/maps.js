@@ -20,6 +20,15 @@ function initMap() {
             map: map,
             suppressMarkers: true
         });
+
+        // Initialize Places Autocomplete after map is ready
+        const inputs = document.querySelectorAll('.address-input');
+        inputs.forEach(input => {
+            const autocomplete = initializeAutocomplete(input);
+            if (autocomplete) {
+                console.log('Autocomplete initialized for input:', input);
+            }
+        });
     } catch (error) {
         console.error('Error initializing map:', error);
         showMapError('Failed to initialize Google Maps');

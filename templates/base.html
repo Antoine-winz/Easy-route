@@ -118,8 +118,15 @@
     });
     </script>
     {% block scripts %}{% endblock %}
-    <script async
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap&loading=async&v=weekly">
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        if (typeof google !== 'undefined') {
+          initMap();
+        } else {
+          console.error('Google Maps failed to load');
+        }
+      });
     </script>
 </body>
 </html>
