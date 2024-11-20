@@ -108,40 +108,32 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
             title = `Stop ${label}`;
         }
 
-        const position = location instanceof google.maps.LatLng ? location : new google.maps.LatLng(location);
-        
-        const markerContent = document.createElement('div');
-        markerContent.className = 'custom-marker';
-        markerContent.innerHTML = `
-            <div style="
-                background-color: ${pinColor};
-                border: 2px solid #FFFFFF;
-                border-radius: 50%;
-                width: ${30 * (scale || 1)}px;
-                height: ${30 * (scale || 1)}px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #FFFFFF;
-                font-weight: bold;
-                font-size: 14px;">
-                ${label}
-            </div>
-        `;
-
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-            position: position,
+        const marker = new google.maps.Marker({
+            position: location,
             map: map,
+            label: {
+                text: label.toString(),
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: 'bold'
+            },
             title: title,
-            content: markerContent
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: pinColor,
+                fillOpacity: 1,
+                strokeWeight: 2,
+                strokeColor: '#FFFFFF',
+                scale: 15 * (scale || 1)
+            }
         });
 
         markers.push(marker);
-
+        
         if (!mapBounds) {
             mapBounds = new google.maps.LatLngBounds();
         }
-        mapBounds.extend(position);
+        mapBounds.extend(location);
         
         return marker;
     } catch (error) {
@@ -153,16 +145,13 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
 function clearMarkers() {
     markers.forEach(marker => {
         if (marker) {
-            marker.map = null;
+            marker.setMap(null);
         }
     });
     markers = [];
     
     if (directionsRenderer) {
         directionsRenderer.setDirections({routes: []});
-    }
-    if (mapBounds) {
-        mapBounds = new google.maps.LatLngBounds();
     }
 }
 
@@ -199,6 +188,7 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
     }
 
     clearMarkers();
+    mapBounds = new google.maps.LatLngBounds();
     
     const isLoopRoute = addresses.length >= 2 && 
                        addresses[0] === addresses[addresses.length - 1];
@@ -236,7 +226,6 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
         }
     }
 
-    // Calculate and display route
     try {
         const response = await new Promise((resolve, reject) => {
             directionsService.route({
@@ -256,9 +245,9 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
 
         directionsRenderer.setDirections(response);
         
-        if (mapBounds && mapBounds.isEmpty()) {
-            response.routes[0].bounds.forEach(coord => mapBounds.extend(coord));
-        }
+        // Extend bounds with route bounds
+        const routeBounds = response.routes[0].bounds;
+        mapBounds.union(routeBounds);
         
         map.fitBounds(mapBounds);
 

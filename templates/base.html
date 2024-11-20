@@ -118,14 +118,8 @@
     });
     </script>
     {% block scripts %}{% endblock %}
-    <script>
-        function loadGoogleMaps() {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap&loading=async`;
-            script.async = true;
-            document.head.appendChild(script);
-        }
-        window.addEventListener('load', loadGoogleMaps);
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap">
     </script>
 </body>
 </html>
