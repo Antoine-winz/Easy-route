@@ -8,27 +8,31 @@ function initializeAutocomplete(input) {
         return;
     }
     
-    try {
-        const autocomplete = new google.maps.places.Autocomplete(input, {
-            types: ['address', 'establishment'],
-            fields: ['formatted_address', 'name', 'place_id']
-        });
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+        types: ['address', 'establishment'],
+        fields: ['formatted_address', 'name', 'place_id', 'geometry']
+    });
+    
+    autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            return;
+        }
         
-        autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace();
-            input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-            
-            if (place.name && place.formatted_address && 
-                !place.formatted_address.startsWith(place.name)) {
-                input.value = `${place.name}, ${place.formatted_address}`;
-            }
-        });
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
         
-        autocompleteInstances.push(autocomplete);
-    } catch (error) {
-        console.error('Error initializing autocomplete:', error);
-    }
+        if (place.name && place.formatted_address && 
+            !place.formatted_address.startsWith(place.name)) {
+            input.value = `${place.name}, ${place.formatted_address}`;
+        } else {
+            input.value = place.formatted_address;
+        }
+    });
+    
+    return autocomplete;
 }
 
 function updateProgress(step, total = 3) {
@@ -109,7 +113,6 @@ document.addEventListener('DOMContentLoaded', function() {
         firstInput.placeholder = 'Enter starting point address';
         firstInput.setAttribute('data-bs-toggle', 'tooltip');
         firstInput.setAttribute('data-bs-title', 'This will be your route starting point');
-        initializeAutocomplete(firstInput);
     }
 });
 
