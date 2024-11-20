@@ -32,6 +32,7 @@ function initializeAutocomplete(input) {
         }
     });
     
+    autocompleteInstances.push({ inputField: input, autocomplete });
     return autocomplete;
 }
 
@@ -114,6 +115,23 @@ document.addEventListener('DOMContentLoaded', function() {
         firstInput.setAttribute('data-bs-toggle', 'tooltip');
         firstInput.setAttribute('data-bs-title', 'This will be your route starting point');
     }
+
+    // Add observer for dynamically added inputs
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === 1) { // ELEMENT_NODE
+                    const inputs = node.querySelectorAll('.address-input');
+                    inputs.forEach(input => initializeAutocomplete(input));
+                }
+            });
+        });
+    });
+
+    observer.observe(document.getElementById('addressInputs'), {
+        childList: true,
+        subtree: true
+    });
 });
 
 document.getElementById('addAddress').addEventListener('click', () => {

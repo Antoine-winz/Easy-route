@@ -6,37 +6,29 @@ let isProcessing = false;
 let mapBounds;
 
 async function initMap() {
-    const mapContainer = document.getElementById('map');
-    if (!mapContainer) {
-        console.error('Map container not found');
+    if (typeof google === 'undefined') {
+        console.error('Google Maps not loaded');
         return;
     }
+
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) return;
     
     try {
         // Initialize map centered on Switzerland
-        window.map = new google.maps.Map(mapContainer, {
+        map = new google.maps.Map(mapContainer, {
             center: { lat: 46.8182, lng: 8.2275 },
             zoom: 8
         });
         
-        window.directionsService = new google.maps.DirectionsService();
-        window.directionsRenderer = new google.maps.DirectionsRenderer({
-            map: window.map,
+        directionsService = new google.maps.DirectionsService();
+        directionsRenderer = new google.maps.DirectionsRenderer({
+            map: map,
             suppressMarkers: true
         });
         
-        // Initialize Places Autocomplete after map is ready
-        if (google.maps.places) {
-            const inputs = document.querySelectorAll('.address-input');
-            inputs.forEach(input => {
-                const autocomplete = initializeAutocomplete(input);
-                if (autocomplete) {
-                    console.log('Autocomplete initialized for input');
-                }
-            });
-        } else {
-            console.error('Places library not loaded');
-        }
+        // Initialize Places Autocomplete
+        initializeAllAutocompletes();
         
     } catch (error) {
         console.error('Error initializing map:', error);
@@ -44,7 +36,20 @@ async function initMap() {
     }
 }
 
-// Make sure initMap is available globally
+function initializeAllAutocompletes() {
+    if (!google.maps.places) {
+        console.error('Places library not loaded');
+        return;
+    }
+    
+    document.querySelectorAll('.address-input').forEach(input => {
+        const autocomplete = initializeAutocomplete(input);
+        if (autocomplete) {
+            console.log('Autocomplete initialized for input');
+        }
+    });
+}
+
 window.initMap = initMap;
 
 function initializeAutocomplete(input) {
