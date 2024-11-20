@@ -136,21 +136,21 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
             title = `Stop ${label}`;
         }
 
-        const markerView = new google.maps.marker.AdvancedMarkerElement({
+        const marker = new google.maps.marker.AdvancedMarkerElement({
             map,
             position: location,
             title: title,
             content: buildMarkerContent(label.toString(), pinColor, scale)
         });
 
-        markers.push(markerView);
+        markers.push(marker);
         
         if (!mapBounds) {
             mapBounds = new google.maps.LatLngBounds();
         }
         mapBounds.extend(location);
         
-        return markerView;
+        return marker;
     } catch (error) {
         console.error('Error creating marker:', error);
         return null;

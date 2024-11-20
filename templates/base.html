@@ -7,9 +7,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/css/style.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script async
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap&v=weekly">
-    </script>
     <style>
         body {
             background-color: #ffffff;
@@ -120,6 +117,33 @@
         });
     });
     </script>
+    <script>
+        function initMap() {
+            if (!window.google || !window.google.maps) {
+                console.error('Google Maps not loaded');
+                return;
+            }
+            
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+            
+            window.map = new google.maps.Map(mapContainer, {
+                center: { lat: 46.8182, lng: 8.2275 },
+                zoom: 8
+            });
+            
+            window.directionsService = new google.maps.DirectionsService();
+            window.directionsRenderer = new google.maps.DirectionsRenderer({
+                map: window.map,
+                suppressMarkers: true
+            });
+        }
+        window.initMap = initMap;
+    </script>
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap"
+        defer
+    ></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
