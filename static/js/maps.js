@@ -20,58 +20,9 @@ function initMap() {
             map: map,
             suppressMarkers: true
         });
-        
-        // Initialize Places Autocomplete
-        if (google.maps.places) {
-            document.querySelectorAll('.address-input').forEach(input => {
-                initializeAutocomplete(input);
-            });
-        }
     } catch (error) {
         console.error('Error initializing map:', error);
         showMapError('Failed to initialize Google Maps');
-    }
-}
-
-function initializeAutocomplete(input) {
-    if (!google || !google.maps || !google.maps.places) {
-        console.error('Google Maps Places library not loaded');
-        return null;
-    }
-    
-    try {
-        const switzerlandBounds = {
-            north: 47.8084,
-            south: 45.8179,
-            west: 5.9559,
-            east: 10.4921
-        };
-        
-        const autocomplete = new google.maps.places.Autocomplete(input, {
-            types: ['address'],
-            fields: ['formatted_address', 'geometry'],
-            bounds: switzerlandBounds,
-            strictBounds: false,
-            componentRestrictions: { country: 'ch' }
-        });
-        
-        autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace();
-            if (!place.geometry) {
-                input.classList.remove('is-valid');
-                input.classList.add('is-invalid');
-                return;
-            }
-            
-            input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-            input.value = place.formatted_address;
-        });
-        
-        return autocomplete;
-    } catch (error) {
-        console.error('Error initializing autocomplete:', error);
-        return null;
     }
 }
 
@@ -210,40 +161,36 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
     const isLoopRoute = addresses.length >= 2 && 
                        addresses[0] === addresses[addresses.length - 1];
 
-    // Geocode addresses and create markers
-    const geocoder = new google.maps.Geocoder();
-    const geocodePromises = addresses.map((address, index) => {
-        return new Promise((resolve, reject) => {
-            geocoder.geocode({ address }, (results, status) => {
-                if (status === 'OK') {
-                    const location = results[0].geometry.location;
-                    const isStart = index === 0;
-                    const isEnd = index === addresses.length - 1;
-                    const isLoopEnd = isLoopRoute && isEnd;
-                    
-                    addMarker(
-                        location,
-                        isLoopEnd ? 1 : index + 1,
-                        isStart,
-                        isEnd,
-                        isLoopEnd
-                    ).then(marker => {
-                        if (marker) {
-                            resolve(location);
-                        } else {
-                            reject(new Error(`Failed to create marker for address ${index + 1}`));
-                        }
-                    });
-                } else {
-                    reject(new Error(`Geocoding failed: ${status}`));
-                }
-            });
-        });
-    });
-
     try {
-        await Promise.all(geocodePromises);
+        // Geocode addresses and create markers
+        const geocoder = new google.maps.Geocoder();
+        const locations = await Promise.all(addresses.map(address => {
+            return new Promise((resolve, reject) => {
+                geocoder.geocode({ address }, (results, status) => {
+                    if (status === 'OK') {
+                        resolve(results[0].geometry.location);
+                    } else {
+                        reject(new Error(`Geocoding failed: ${status}`));
+                    }
+                });
+            });
+        }));
 
+        // Add markers
+        await Promise.all(locations.map((location, index) => {
+            const isStart = index === 0;
+            const isEnd = index === addresses.length - 1;
+            const isLoopEnd = isLoopRoute && isEnd;
+            return addMarker(
+                location,
+                isLoopEnd ? 1 : index + 1,
+                isStart,
+                isEnd,
+                isLoopEnd
+            );
+        }));
+
+        // Calculate and display route
         const response = await new Promise((resolve, reject) => {
             directionsService.route({
                 origin: addresses[0],
@@ -262,23 +209,9 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
 
         directionsRenderer.setDirections(response);
         
-        // Make sure mapBounds is properly initialized
-        if (!mapBounds) {
-            mapBounds = new google.maps.LatLngBounds();
-        }
-        
-        // Include route bounds
-        const routeBounds = response.routes[0].bounds;
-        mapBounds.union(routeBounds);
-        
-        // Ensure the bounds are valid before fitting
-        if (!mapBounds.isEmpty()) {
-            map.fitBounds(mapBounds);
-        } else {
-            console.warn('Empty bounds, using default center');
-            map.setCenter({ lat: 46.8182, lng: 8.2275 });
-            map.setZoom(8);
-        }
+        // Ensure mapBounds includes all route points
+        response.routes[0].bounds.extend(response.routes[0].bounds);
+        map.fitBounds(response.routes[0].bounds);
 
         if (totalDistance !== null && totalDuration !== null) {
             updateRouteInfo(totalDistance, totalDuration);
@@ -290,8 +223,7 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
 }
 
 // Export necessary functions
-window.initializeAutocomplete = initializeAutocomplete;
 window.displayRoute = displayRoute;
 window.clearMarkers = clearMarkers;
 window.showMapError = showMapError;
-window.initMap = initMap;  // Make initMap available globally for the callback
+window.initMap = initMap;

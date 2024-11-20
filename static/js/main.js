@@ -3,37 +3,40 @@ let isOptimizing = false;
 let autocompleteInstances = [];
 
 function initializeAutocomplete(input) {
-    if (!google || !google.maps || !google.maps.places) {
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
         console.error('Google Maps Places library not loaded');
+        setTimeout(() => initializeAutocomplete(input), 1000); // Retry after 1s
+        return null;
+    }
+    
+    try {
+        const autocomplete = new google.maps.places.Autocomplete(input, {
+            types: ['address'],
+            fields: ['formatted_address', 'geometry']
+        });
+        
+        autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            handlePlaceSelection(place, input);
+        });
+        
+        return autocomplete;
+    } catch (error) {
+        console.error('Error initializing autocomplete:', error);
+        return null;
+    }
+}
+
+function handlePlaceSelection(place, input) {
+    if (!place.geometry) {
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
         return;
     }
     
-    const autocomplete = new google.maps.places.Autocomplete(input, {
-        types: ['address', 'establishment'],
-        fields: ['formatted_address', 'name', 'place_id', 'geometry']
-    });
-    
-    autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (!place.geometry) {
-            input.classList.remove('is-valid');
-            input.classList.add('is-invalid');
-            return;
-        }
-        
-        input.classList.remove('is-invalid');
-        input.classList.add('is-valid');
-        
-        if (place.name && place.formatted_address && 
-            !place.formatted_address.startsWith(place.name)) {
-            input.value = `${place.name}, ${place.formatted_address}`;
-        } else {
-            input.value = place.formatted_address;
-        }
-    });
-    
-    autocompleteInstances.push({ inputField: input, autocomplete });
-    return autocomplete;
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    input.value = place.formatted_address;
 }
 
 function updateProgress(step, total = 3) {
