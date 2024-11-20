@@ -119,11 +119,6 @@
     </script>
     <script>
         function initMap() {
-            if (!window.google || !window.google.maps) {
-                console.error('Google Maps not loaded');
-                return;
-            }
-            
             const mapContainer = document.getElementById('map');
             if (!mapContainer) return;
             
@@ -138,12 +133,8 @@
                 suppressMarkers: true
             });
         }
-        window.initMap = initMap;
     </script>
-    <script
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap"
-        defer
-    ></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
