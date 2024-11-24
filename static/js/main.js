@@ -83,6 +83,14 @@ function hideLoadingOverlay() {
     overlay.style.display = 'none';
 }
 
+// Wait for map to be ready before initializing Places
+document.addEventListener('mapReady', function() {
+    // Initialize Places autocomplete for all address inputs
+    document.querySelectorAll('.address-input').forEach(input => {
+        initializeAutocomplete(input);
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize loop route checkbox handler
     const loopRouteCheckbox = document.getElementById('isLoopRoute');
