@@ -217,7 +217,7 @@ async function displayRoute(addresses, totalDistance = null, totalDuration = nul
     }
 }
 
-async function initMap() {
+function initMap() {
     const mapContainer = document.getElementById('map');
     if (!mapContainer) {
         console.error('Map container not found');
@@ -225,9 +225,6 @@ async function initMap() {
     }
     
     try {
-        // Wait for Google Maps to be fully loaded
-        await waitForGoogleMaps();
-        
         // Initialize map
         map = new google.maps.Map(mapContainer, {
             center: { lat: 46.8182, lng: 8.2275 }, // Switzerland center
@@ -249,12 +246,12 @@ async function initMap() {
             suppressMarkers: true
         });
         
-        // Dispatch custom event when map is ready
-        const mapReadyEvent = new CustomEvent('mapReady');
-        document.dispatchEvent(mapReadyEvent);
-        
+        // Initialize all address inputs after map is ready
+        document.querySelectorAll('.address-input').forEach(input => {
+            initializeAutocomplete(input);
+        });
     } catch (error) {
         console.error('Error initializing map:', error);
-        showMapError('Failed to initialize Google Maps. Please check your connection and try again.');
+        showMapError('Failed to initialize Google Maps');
     }
 }

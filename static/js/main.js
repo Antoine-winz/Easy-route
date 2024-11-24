@@ -18,14 +18,14 @@ function initializeAutocomplete(input) {
         };
         
         const autocomplete = new google.maps.places.Autocomplete(input, {
-            types: ['address', 'establishment'],
-            fields: ['formatted_address', 'geometry', 'name', 'place_id'],
+            types: ['address'],
+            fields: ['formatted_address', 'geometry'],
             componentRestrictions: { country: 'ch' },
             bounds: new google.maps.LatLngBounds(
                 { lat: switzerlandBounds.south, lng: switzerlandBounds.west },
                 { lat: switzerlandBounds.north, lng: switzerlandBounds.east }
             ),
-            strictBounds: false
+            strictBounds: true
         });
         
         autocomplete.addListener('place_changed', () => {
@@ -82,14 +82,6 @@ function hideLoadingOverlay() {
     const overlay = document.querySelector('.loading-overlay');
     overlay.style.display = 'none';
 }
-
-// Wait for map to be ready before initializing Places
-document.addEventListener('mapReady', function() {
-    // Initialize Places autocomplete for all address inputs
-    document.querySelectorAll('.address-input').forEach(input => {
-        initializeAutocomplete(input);
-    });
-});
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize loop route checkbox handler

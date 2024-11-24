@@ -118,13 +118,8 @@
     });
     </script>
     {% block scripts %}{% endblock %}
-    <script>
-    function initMap() {
-        // Map initialization will be handled in maps.js
-    }
-    </script>
-    <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&loading=async&libraries=places&callback=initMap">
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap">
     </script>
 </body>
 </html>
