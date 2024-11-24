@@ -71,19 +71,15 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
             title = `Stop ${label}`;
         }
 
-        const marker = new google.maps.Marker({
+        const marker = new google.maps.marker.AdvancedMarkerElement({
             map,
             position: location,
-            label: label.toString(),
             title: title,
-            icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                fillColor: pinColor,
-                fillOpacity: 1,
-                strokeWeight: 1,
-                strokeColor: '#FFFFFF',
-                scale: scale * 12
-            }
+            content: new google.maps.marker.PinElement({
+                glyph: label.toString(),
+                background: pinColor,
+                borderColor: '#FFFFFF'
+            })
         });
 
         // Add tooltip
