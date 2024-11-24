@@ -10,9 +10,22 @@ function initializeAutocomplete(input) {
     }
     
     try {
+        const switzerlandBounds = {
+            north: 47.8084,
+            south: 45.8183,
+            west: 5.9562,
+            east: 10.4922
+        };
+        
         const autocomplete = new google.maps.places.Autocomplete(input, {
             types: ['address'],
-            fields: ['formatted_address', 'geometry']
+            fields: ['formatted_address', 'geometry'],
+            componentRestrictions: { country: 'ch' },
+            bounds: new google.maps.LatLngBounds(
+                { lat: switzerlandBounds.south, lng: switzerlandBounds.west },
+                { lat: switzerlandBounds.north, lng: switzerlandBounds.east }
+            ),
+            strictBounds: true
         });
         
         autocomplete.addListener('place_changed', () => {

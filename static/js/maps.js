@@ -227,8 +227,16 @@ function initMap() {
     try {
         // Initialize map
         map = new google.maps.Map(mapContainer, {
-            center: { lat: 46.8182, lng: 8.2275 },
-            zoom: 8
+            center: { lat: 46.8182, lng: 8.2275 }, // Switzerland center
+            zoom: 8,
+            restriction: {
+                latLngBounds: {
+                    north: 47.8084,
+                    south: 45.8183,
+                    west: 5.9562,
+                    east: 10.4922
+                }
+            }
         });
         
         // Initialize services
