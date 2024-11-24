@@ -27,41 +27,31 @@ function waitForGoogleMaps() {
 }
 
 function initializeAutocomplete(input) {
-    if (!google || !google.maps || !google.maps.places) {
-        console.error('Google Maps Places library not loaded');
-        return;
-    }
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+        types: ['address', 'establishment'],
+        fields: ['formatted_address', 'name', 'place_id', 'geometry']
+    });
     
-    try {
-        const autocomplete = new google.maps.places.Autocomplete(input, {
-            types: ['address', 'establishment'],
-            fields: ['formatted_address', 'name', 'place_id', 'geometry']
-        });
+    autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            return;
+        }
         
-        autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace();
-            if (!place.geometry) {
-                input.classList.remove('is-valid');
-                input.classList.add('is-invalid');
-                return;
-            }
-            
-            input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-            
-            if (place.name && place.formatted_address && 
-                !place.formatted_address.startsWith(place.name)) {
-                input.value = `${place.name}, ${place.formatted_address}`;
-            } else {
-                input.value = place.formatted_address;
-            }
-        });
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
         
-        return autocomplete;
-    } catch (error) {
-        console.error('Error initializing autocomplete:', error);
-        return null;
-    }
+        if (place.name && place.formatted_address && 
+            !place.formatted_address.startsWith(place.name)) {
+            input.value = `${place.name}, ${place.formatted_address}`;
+        } else {
+            input.value = place.formatted_address;
+        }
+    });
+    
+    return autocomplete;
 }
 
 function showMapError(message) {

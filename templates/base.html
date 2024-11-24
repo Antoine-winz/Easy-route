@@ -116,7 +116,9 @@
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
     });
-
+    </script>
+    {% block scripts %}{% endblock %}
+    <script>
     function initMap() {
         const mapContainer = document.getElementById('map');
         if (!mapContainer) return;
@@ -138,9 +140,8 @@
         });
     }
     </script>
-    <script defer
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap">
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&callback=initMap&loading=async">
     </script>
-    {% block scripts %}{% endblock %}
 </body>
 </html>

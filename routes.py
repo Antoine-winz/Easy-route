@@ -144,12 +144,11 @@ def optimize_route():
         # Store initial route in database
         try:
             app.logger.info("Storing initial route in database")
-            route = Route(
-                name=route_name,
-                description=route_description,
-                addresses=addresses,
-                optimized_route=addresses  # Initially same as input order
-            )
+            route = Route()
+            route.name = route_name
+            route.description = route_description
+            route.addresses = addresses
+            route.optimized_route = addresses  # Initially same as input order
             db.session.add(route)
             db.session.commit()
             app.logger.info(f"Initial route stored with ID: {route.id}")

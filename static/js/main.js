@@ -2,33 +2,16 @@ let currentRouteId = null;
 let isOptimizing = false;
 let autocompleteInstances = [];
 
-function initializeAutocomplete(input) {
-    if (!google || !google.maps || !google.maps.places) {
-        console.error('Google Maps Places library not loaded');
-        return;
-    }
-    
-    try {
-        const autocomplete = new google.maps.places.Autocomplete(input, {
-            types: ['address', 'establishment'],
-            fields: ['formatted_address', 'name', 'place_id']
-        });
-        
-        autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace();
-            input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-            
-            if (place.name && place.formatted_address && 
-                !place.formatted_address.startsWith(place.name)) {
-                input.value = `${place.name}, ${place.formatted_address}`;
+// Re-initialize autocomplete for dynamically added inputs
+function reinitializeAutocomplete() {
+    document.querySelectorAll('.address-input').forEach(input => {
+        if (!input.dataset.autocomplete) {
+            const instance = initializeAutocomplete(input);
+            if (instance) {
+                input.dataset.autocomplete = 'initialized';
             }
-        });
-        
-        autocompleteInstances.push(autocomplete);
-    } catch (error) {
-        console.error('Error initializing autocomplete:', error);
-    }
+        }
+    });
 }
 
 function updateProgress(step, total = 3) {
