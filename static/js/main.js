@@ -6,7 +6,7 @@ let autocompleteInstances = [];
 function initializeAutocomplete(input) {
     if (!google || !google.maps || !google.maps.places) {
         console.error('Google Maps Places library not loaded');
-        return;
+        return null;
     }
     
     try {
@@ -29,7 +29,6 @@ function initializeAutocomplete(input) {
         });
         
         autocompleteInstances.push(autocomplete);
-        input.dataset.autocomplete = 'initialized';
         return autocomplete;
     } catch (error) {
         console.error('Error initializing autocomplete:', error);

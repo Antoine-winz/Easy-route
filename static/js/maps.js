@@ -224,29 +224,26 @@ function initMap() {
         return;
     }
     
-    if (!window.google || !window.google.maps) {
-        showMapError('Google Maps failed to load. Please check your internet connection and try again.');
-        return;
-    }
-
     try {
-        const mapOptions = {
-            center: { lat: 46.8182, lng: 8.2275 }, // Switzerland center
+        // Initialize map
+        map = new google.maps.Map(mapContainer, {
+            center: { lat: 46.8182, lng: 8.2275 },
             zoom: 8
-        };
+        });
         
-        map = new google.maps.Map(mapContainer, mapOptions);
-        
-        // Initialize services after map is created
+        // Initialize services
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer({
             map: map,
-            suppressMarkers: true,
-            preserveViewport: false
+            suppressMarkers: true
         });
         
+        // Initialize all address inputs after map is ready
+        document.querySelectorAll('.address-input').forEach(input => {
+            initializeAutocomplete(input);
+        });
     } catch (error) {
         console.error('Error initializing map:', error);
-        showMapError('Failed to initialize Google Maps. Please refresh the page.');
+        showMapError('Failed to initialize Google Maps');
     }
 }
