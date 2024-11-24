@@ -134,36 +134,6 @@
                 map: map,
                 suppressMarkers: true
             });
-            
-            // Initialize Places service
-            const placesService = new google.maps.places.PlacesService(map);
-            
-            // Initialize autocomplete for existing inputs
-            document.querySelectorAll('.address-input').forEach(input => {
-                const autocomplete = new google.maps.places.Autocomplete(input, {
-                    types: ['address', 'establishment'],
-                    fields: ['formatted_address', 'name', 'place_id', 'geometry']
-                });
-                
-                autocomplete.addListener('place_changed', () => {
-                    const place = autocomplete.getPlace();
-                    if (!place.geometry) {
-                        input.classList.remove('is-valid');
-                        input.classList.add('is-invalid');
-                        return;
-                    }
-                    
-                    input.classList.remove('is-invalid');
-                    input.classList.add('is-valid');
-                    
-                    if (place.name && place.formatted_address && 
-                        !place.formatted_address.startsWith(place.name)) {
-                        input.value = `${place.name}, ${place.formatted_address}`;
-                    } else {
-                        input.value = place.formatted_address;
-                    }
-                });
-            });
         } catch (error) {
             console.error('Error initializing map:', error);
             showMapError('Failed to initialize Google Maps');
@@ -171,7 +141,7 @@
     }
     </script>
     <script async
-        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&loading=async&libraries=places&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&loading=async&callback=initMap">
     </script>
 </body>
 </html>

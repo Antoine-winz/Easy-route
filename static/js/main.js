@@ -1,18 +1,6 @@
 let currentRouteId = null;
 let isOptimizing = false;
-let autocompleteInstances = [];
-
-// Re-initialize autocomplete for dynamically added inputs
-function reinitializeAutocomplete() {
-    document.querySelectorAll('.address-input').forEach(input => {
-        if (!input.dataset.autocomplete) {
-            const instance = initializeAutocomplete(input);
-            if (instance) {
-                input.dataset.autocomplete = 'initialized';
-            }
-        }
-    });
-}
+// Autocomplete functionality temporarily removed
 
 function updateProgress(step, total = 3) {
     const progressContainer = document.querySelector('.progress-container');
@@ -92,7 +80,6 @@ document.addEventListener('DOMContentLoaded', function() {
         firstInput.placeholder = 'Enter starting point address';
         firstInput.setAttribute('data-bs-toggle', 'tooltip');
         firstInput.setAttribute('data-bs-title', 'This will be your route starting point');
-        initializeAutocomplete(firstInput);
     }
 });
 
