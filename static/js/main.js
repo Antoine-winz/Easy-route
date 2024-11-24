@@ -18,14 +18,14 @@ function initializeAutocomplete(input) {
         };
         
         const autocomplete = new google.maps.places.Autocomplete(input, {
-            types: ['address'],
-            fields: ['formatted_address', 'geometry'],
+            types: ['address', 'establishment'],
+            fields: ['formatted_address', 'geometry', 'name', 'place_id'],
             componentRestrictions: { country: 'ch' },
             bounds: new google.maps.LatLngBounds(
                 { lat: switzerlandBounds.south, lng: switzerlandBounds.west },
                 { lat: switzerlandBounds.north, lng: switzerlandBounds.east }
             ),
-            strictBounds: true
+            strictBounds: false
         });
         
         autocomplete.addListener('place_changed', () => {
