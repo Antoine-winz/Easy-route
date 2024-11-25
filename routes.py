@@ -280,7 +280,14 @@ def optimize_route():
 
         # Geocode addresses using Google Maps Geocoding API
         app.logger.info("Starting geocoding process")
-        api_key = app.config['GOOGLE_MAPS_API_KEY']
+        api_key = os.environ.get('GOOGLE_MAPS_API_KEY')
+        if not api_key:
+            app.logger.error("Google Maps API key not found in environment variables")
+            return jsonify({
+                'success': False,
+                'error': 'Missing API configuration'
+            }), 500
+            
         geocoded_addresses = []
         coordinates = []
         
@@ -379,6 +386,8 @@ def export_route(route_id):
         }), 500
 
 def get_distance_matrix(locations, api_key):
+    if not api_key:
+        raise ValueError("API key is required for distance matrix calculation")
     url = "https://maps.googleapis.com/maps/api/distancematrix/json"
     
     # Create a matrix of all distances
