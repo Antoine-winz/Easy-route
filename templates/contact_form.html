@@ -72,10 +72,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Initialize address autocomplete
+    // Initialize address autocomplete after Google Maps is loaded
     const addressInput = document.querySelector('.address-input');
-    if (addressInput) {
-        initializeAutocomplete(addressInput);
+    if (addressInput && window.google && window.google.maps && window.google.maps.places) {
+        const autocomplete = new google.maps.places.Autocomplete(addressInput, {
+            types: ['address'],
+            componentRestrictions: { country: 'ch' }
+        });
+        
+        autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (!place.geometry) {
+                addressInput.classList.remove('is-valid');
+                addressInput.classList.add('is-invalid');
+                return;
+            }
+            addressInput.classList.remove('is-invalid');
+            addressInput.classList.add('is-valid');
+            addressInput.value = place.formatted_address;
+        });
     }
 });
 </script>
