@@ -1,6 +1,6 @@
 from flask import render_template, jsonify, request, redirect, url_for
 from app import app, db
-from models import Route
+from models import Route, Contact
 from datetime import datetime
 import requests
 import numpy as np
@@ -326,3 +326,55 @@ def nearest_neighbor(distance_matrix, has_end_point=False, is_loop_route=False):
             current = next_point
     
     return path
+# Contact Management Routes
+@app.route('/contacts')
+def list_contacts():
+    contacts = Contact.query.order_by(Contact.business_name).all()
+    return render_template('contacts.html', contacts=contacts)
+
+@app.route('/contacts/new', methods=['GET'])
+def new_contact():
+    return render_template('contact_form.html', contact=None)
+
+@app.route('/contacts', methods=['POST'])
+def create_contact():
+    try:
+        contact = Contact(
+            business_name=request.form['business_name'],
+            contact_name=request.form['contact_name'],
+            address=request.form['address'],
+            notes=request.form['notes']
+        )
+        db.session.add(contact)
+        db.session.commit()
+        return redirect(url_for('list_contacts'))
+    except Exception as e:
+        app.logger.error(f"Error creating contact: {str(e)}")
+        return render_template('contact_form.html', error="Failed to create contact"), 400
+
+@app.route('/contacts/<int:contact_id>', methods=['GET'])
+def edit_contact(contact_id):
+    contact = Contact.query.get_or_404(contact_id)
+    return render_template('contact_form.html', contact=contact)
+
+@app.route('/contacts/<int:contact_id>', methods=['POST'])
+def update_contact(contact_id):
+    try:
+        contact = Contact.query.get_or_404(contact_id)
+        contact.business_name = request.form['business_name']
+        contact.contact_name = request.form['contact_name']
+        contact.address = request.form['address']
+        contact.notes = request.form['notes']
+        db.session.commit()
+        return redirect(url_for('list_contacts'))
+    except Exception as e:
+        app.logger.error(f"Error updating contact: {str(e)}")
+        return render_template('contact_form.html', contact=contact, error="Failed to update contact"), 400
+
+@app.route('/contacts/<int:contact_id>/select')
+def select_contact_address(contact_id):
+    contact = Contact.query.get_or_404(contact_id)
+    return jsonify({
+        'success': True,
+        'address': contact.address
+    })

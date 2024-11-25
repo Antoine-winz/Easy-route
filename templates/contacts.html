@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Contacts</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{{ url_for('new_contact') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Contact
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for contact in contacts %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ contact.business_name }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ contact.contact_name }}</h6>
+                    <p class="card-text">
+                        <i class="fas fa-map-marker-alt"></i> {{ contact.address }}
+                    </p>
+                    {% if contact.notes %}
+                    <p class="card-text"><small>{{ contact.notes }}</small></p>
+                    {% endif %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            Last updated: {{ contact.updated_at.strftime('%Y-%m-%d') }}
+                        </small>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary btn-sm select-address" 
+                                    data-contact-id="{{ contact.id }}"
+                                    data-bs-toggle="tooltip" 
+                                    title="Use this address in route">
+                                <i class="fas fa-map-pin"></i> Use Address
+                            </button>
+                            <a href="{{ url_for('edit_contact', contact_id=contact.id) }}" 
+                               class="btn btn-outline-secondary btn-sm"
+                               data-bs-toggle="tooltip" 
+                               title="Edit contact details">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.select-address').forEach(button => {
+        button.addEventListener('click', async function() {
+            const contactId = this.dataset.contactId;
+            try {
+                const response = await fetch(`/contacts/${contactId}/select`);
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = `/?address=${encodeURIComponent(data.address)}`;
+                }
+            } catch (error) {
+                console.error('Error selecting address:', error);
+                alert('Failed to select address. Please try again.');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
