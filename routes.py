@@ -1,3 +1,106 @@
+import json
+import requests
+from flask import redirect, request, url_for, session
+from flask_login import login_user, logout_user, login_required, current_user
+from app import app, client, db, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_DISCOVERY_URL
+from models import User
+
+def get_google_provider_cfg():
+    try:
+        return requests.get(GOOGLE_DISCOVERY_URL).json()
+    except Exception as e:
+        app.logger.error(f"Failed to get Google provider config: {e}")
+        return None
+
+@app.route("/login")
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    # Get Google's provider configuration
+    google_provider_cfg = get_google_provider_cfg()
+    if not google_provider_cfg:
+        return "Error: Failed to get Google provider configuration", 500
+    
+    # Get the authorization endpoint
+    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
+    
+    # Construct the request for Google login
+    request_uri = client.prepare_request_uri(
+        authorization_endpoint,
+        redirect_uri=request.base_url + "/callback",
+        scope=["openid", "email", "profile"],
+    )
+    return redirect(request_uri)
+
+@app.route("/login/callback")
+def callback():
+    # Get the authorization code from Google
+    code = request.args.get("code")
+    if not code:
+        return "Error: No code provided", 400
+
+    google_provider_cfg = get_google_provider_cfg()
+    if not google_provider_cfg:
+        return "Error: Failed to get Google provider configuration", 500
+
+    token_endpoint = google_provider_cfg["token_endpoint"]
+    
+    # Prepare and send token request
+    try:
+        token_url, headers, body = client.prepare_token_request(
+            token_endpoint,
+            authorization_response=request.url,
+            redirect_url=request.base_url,
+            code=code
+        )
+        token_response = requests.post(
+            token_url,
+            headers=headers,
+            data=body,
+            auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
+        )
+
+        client.parse_request_body_response(json.dumps(token_response.json()))
+    except Exception as e:
+        app.logger.error(f"Token request failed: {e}")
+        return "Failed to get token from Google", 500
+
+    # Get user info from Google
+    userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
+    uri, headers, body = client.add_token(userinfo_endpoint)
+    userinfo_response = requests.get(uri, headers=headers, data=body)
+    
+    if userinfo_response.json().get("email_verified"):
+        google_id = userinfo_response.json()["sub"]
+        email = userinfo_response.json()["email"]
+        name = userinfo_response.json().get("name", email.split('@')[0])
+        picture = userinfo_response.json().get("picture")
+        
+        # Find or create user
+        user = User.query.filter_by(google_id=google_id).first()
+        if not user:
+            user = User(
+                google_id=google_id,
+                email=email,
+                name=name,
+                profile_pic=picture
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # Begin user session
+        login_user(user)
+        return redirect(url_for('index'))
+    else:
+        return "User email not verified by Google.", 400
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
 from flask import render_template, jsonify, request, redirect, url_for
 from app import app, db
 from models import Route, Contact
