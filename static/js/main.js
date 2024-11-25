@@ -139,6 +139,12 @@ function hideLoadingOverlay() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Unhandled promise rejection:', event.reason);
+    if (event.reason.toString().includes('Google Maps')) {
+        showErrorAlert('Failed to load Google Maps. Please refresh the page.');
+    }
+});
     // Initialize loop route checkbox handler
     const loopRouteCheckbox = document.getElementById('isLoopRoute');
     const endPointSection = document.getElementById('endPointSection');

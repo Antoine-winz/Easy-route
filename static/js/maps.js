@@ -71,23 +71,17 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
             title = `Stop ${label}`;
         }
 
-        const marker = new google.maps.Marker({
+        const marker = new google.maps.marker.AdvancedMarkerElement({
             map,
             position: location,
             title: title,
-            label: {
-                text: label.toString(),
-                color: '#FFFFFF'
-            },
-            icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                fillColor: pinColor,
-                fillOpacity: 1,
-                strokeColor: '#FFFFFF',
-                strokeWeight: 2,
-                scale: 12
-            },
-            zIndex: isStart || isEnd ? 2 : 1
+            content: new google.maps.marker.PinElement({
+                background: pinColor,
+                borderColor: '#FFFFFF',
+                glyphColor: '#FFFFFF',
+                scale: scale,
+                glyph: label.toString()
+            })
         });
 
         markers.push(marker);
