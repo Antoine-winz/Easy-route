@@ -1,13 +1,45 @@
 let currentRouteId = null;
 let isOptimizing = false;
-// Autocomplete functionality temporarily removed
 let autocompleteInstances = [];
+
+async function fetchContactSuggestions(searchTerm) {
+    try {
+        const response = await fetch(`/contacts/suggest?term=${encodeURIComponent(searchTerm)}`);
+        const data = await response.json();
+        return data.suggestions;
+    } catch (error) {
+        console.error('Error fetching contact suggestions:', error);
+        return [];
+    }
+}
 
 function initializeAutocomplete(input) {
     if (!google || !google.maps || !google.maps.places) {
         console.error('Google Maps Places library not loaded');
         return null;
     }
+
+    // Create a datalist element for contact suggestions
+    const datalistId = `contact-suggestions-${Math.random().toString(36).substr(2, 9)}`;
+    const datalist = document.createElement('datalist');
+    datalist.id = datalistId;
+    input.parentNode.appendChild(datalist);
+    input.setAttribute('list', datalistId);
+
+    // Add input event listener for contact suggestions
+    let debounceTimer;
+    input.addEventListener('input', async (e) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+            const searchTerm = e.target.value;
+            if (searchTerm.length >= 2) {
+                const suggestions = await fetchContactSuggestions(searchTerm);
+                datalist.innerHTML = suggestions
+                    .map(suggestion => `<option value="${suggestion.value}" label="${suggestion.label}">`)
+                    .join('');
+            }
+        }, 300);
+    });
     
     try {
         const switzerlandBounds = {

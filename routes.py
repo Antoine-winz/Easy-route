@@ -378,3 +378,26 @@ def select_contact_address(contact_id):
         'success': True,
         'address': contact.address
     })
+
+
+@app.route('/contacts/suggest')
+def suggest_contacts():
+    search_term = request.args.get('term', '').lower()
+    if not search_term:
+        return jsonify({'suggestions': []})
+    
+    # Search contacts where business name, contact name, or address contains the search term
+    contacts = Contact.query.filter(
+        db.or_(
+            Contact.business_name.ilike(f'%{search_term}%'),
+            Contact.contact_name.ilike(f'%{search_term}%'),
+            Contact.address.ilike(f'%{search_term}%')
+        )
+    ).limit(5).all()
+    
+    suggestions = [{
+        'label': f"{contact.business_name} - {contact.address}",
+        'value': contact.address
+    } for contact in contacts]
+    
+    return jsonify({'suggestions': suggestions})
