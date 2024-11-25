@@ -5,6 +5,12 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import app, client, db, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_DISCOVERY_URL
 from models import User
 
+@app.errorhandler(403)
+def forbidden_error(error):
+    return render_template('error.html', 
+        error_code=403,
+        error_message="Access Forbidden. Please check your authentication configuration."), 403
+
 def get_google_provider_cfg():
     try:
         return requests.get(GOOGLE_DISCOVERY_URL).json()
@@ -20,15 +26,18 @@ def login():
     # Get Google's provider configuration
     google_provider_cfg = get_google_provider_cfg()
     if not google_provider_cfg:
-        return "Error: Failed to get Google provider configuration", 500
+        return render_template('error.html',
+            error_code=500,
+            error_message="Failed to get Google provider configuration"), 500
     
-    # Get the authorization endpoint
-    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
+    # Use the correct redirect URI format
+    redirect_uri = url_for('callback', _external=True)
     
     # Construct the request for Google login
+    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
     request_uri = client.prepare_request_uri(
         authorization_endpoint,
-        redirect_uri=request.base_url + "/callback",
+        redirect_uri=redirect_uri,
         scope=["openid", "email", "profile"],
     )
     return redirect(request_uri)
@@ -38,20 +47,25 @@ def callback():
     # Get the authorization code from Google
     code = request.args.get("code")
     if not code:
-        return "Error: No code provided", 400
+        return render_template('error.html',
+            error_code=400,
+            error_message="No authorization code provided"), 400
 
     google_provider_cfg = get_google_provider_cfg()
     if not google_provider_cfg:
-        return "Error: Failed to get Google provider configuration", 500
+        return render_template('error.html',
+            error_code=500,
+            error_message="Failed to get Google provider configuration"), 500
 
     token_endpoint = google_provider_cfg["token_endpoint"]
     
     # Prepare and send token request
     try:
+        # Use the correct redirect URI here as well
         token_url, headers, body = client.prepare_token_request(
             token_endpoint,
             authorization_response=request.url,
-            redirect_url=request.base_url,
+            redirect_url=url_for('callback', _external=True),
             code=code
         )
         token_response = requests.post(
@@ -93,7 +107,9 @@ def callback():
         login_user(user)
         return redirect(url_for('index'))
     else:
-        return "User email not verified by Google.", 400
+        return render_template('error.html',
+            error_code=400,
+            error_message="Email not verified by Google. Please verify your email first."), 400
 
 @app.route("/logout")
 @login_required
