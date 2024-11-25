@@ -16,9 +16,19 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(24)
 
 # OAuth 2.0 client setup
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", None)
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", None)
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+
+if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+    app.logger.error("Missing Google OAuth credentials")
+
+# Initialize OAuth client
+try:
+    client = WebApplicationClient(GOOGLE_CLIENT_ID)
+except Exception as e:
+    app.logger.error(f"Failed to initialize OAuth client: {e}")
+    client = None
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -31,10 +41,15 @@ login_manager.login_message_category = 'info'
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.permanent_session_lifetime = timedelta(minutes=30)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['PREFERRED_URL_SCHEME'] = 'https'
 
-# OAuth2 client setup
-client = WebApplicationClient(GOOGLE_CLIENT_ID)
+# Ensure session is secure
+@app.before_request
+def before_request():
+    if not request.is_secure and not app.debug:
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
 
 @login_manager.user_loader
 def load_user(user_id):

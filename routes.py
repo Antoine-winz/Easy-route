@@ -20,28 +20,28 @@ def get_google_provider_cfg():
 
 @app.route("/login")
 def login():
-    # Handle case where we're already logged in
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
-    # Ensure required configuration is present
-    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-        app.logger.error("Missing Google OAuth configuration")
+    if not client:
         return render_template('error.html',
             error_code=500,
-            error_message="OAuth configuration is missing"), 500
+            error_message="Authentication system not properly configured"), 500
     
     try:
-        # Get Google provider configuration
         google_provider_cfg = get_google_provider_cfg()
         if not google_provider_cfg:
             raise Exception("Failed to get Google provider configuration")
         
-        # Construct the request URI for Google login
+        # Use Replit's domain for the callback
+        callback_url = url_for('callback', _external=True)
+        if 'replit.dev' in request.host:
+            callback_url = callback_url.replace('http://', 'https://')
+        
         authorization_endpoint = google_provider_cfg["authorization_endpoint"]
         request_uri = client.prepare_request_uri(
             authorization_endpoint,
-            redirect_uri=url_for('callback', _external=True, _scheme='https'),
+            redirect_uri=callback_url,
             scope=["openid", "email", "profile"]
         )
         
@@ -50,26 +50,35 @@ def login():
         app.logger.error(f"Login error: {str(e)}")
         return render_template('error.html',
             error_code=500,
-            error_message="Authentication system error. Please try again."), 500
+            error_message="Authentication system error"), 500
 
-@app.route("/login/callback")
+@app.route("/callback")
 def callback():
+    if not client:
+        return render_template('error.html',
+            error_code=500,
+            error_message="Authentication system not properly configured"), 500
+            
     try:
-        # Get authorization code from Google
+        # Get authorization code
         code = request.args.get("code")
         if not code:
             raise Exception("No authorization code received")
 
-        # Get Google provider configuration
         google_provider_cfg = get_google_provider_cfg()
         if not google_provider_cfg:
             raise Exception("Failed to get Google provider configuration")
 
-        # Prepare and send token request
+        # Use the same callback URL construction as login
+        callback_url = url_for('callback', _external=True)
+        if 'replit.dev' in request.host:
+            callback_url = callback_url.replace('http://', 'https://')
+
+        # Get tokens
         token_url, headers, body = client.prepare_token_request(
             google_provider_cfg["token_endpoint"],
             authorization_response=request.url,
-            redirect_url=url_for('callback', _external=True, _scheme='https'),
+            redirect_url=callback_url,
             code=code
         )
         
@@ -80,45 +89,42 @@ def callback():
             auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
         )
 
-        # Parse the token response
         client.parse_request_body_response(json.dumps(token_response.json()))
 
-        # Get user info from Google
+        # Get user info
         userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
         uri, headers, body = client.add_token(userinfo_endpoint)
         userinfo_response = requests.get(uri, headers=headers, data=body)
         
         if userinfo_response.json().get("email_verified"):
-            # Extract user info
-            google_id = userinfo_response.json()["sub"]
-            email = userinfo_response.json()["email"]
-            name = userinfo_response.json().get("name", email.split('@')[0])
-            picture = userinfo_response.json().get("picture")
-            
-            # Find or create user
-            user = User.query.filter_by(google_id=google_id).first()
+            unique_id = userinfo_response.json()["sub"]
+            user_email = userinfo_response.json()["email"]
+            user_name = userinfo_response.json().get("name", user_email.split('@')[0])
+            picture = userinfo_response.json().get("picture", None)
+
+            # Create or update user
+            user = User.query.filter_by(google_id=unique_id).first()
             if not user:
-                user = User(
-                    google_id=google_id,
-                    email=email,
-                    name=name,
-                    profile_pic=picture
-                )
+                user = User()
+                user.google_id = unique_id
+                user.name = user_name
+                user.email = user_email
+                user.profile_pic = picture
                 db.session.add(user)
                 db.session.commit()
-            
-            # Begin user session
+
             login_user(user)
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('index'))
-            
-        raise Exception("Email not verified by Google")
-        
+            return redirect(url_for('index'))
+        else:
+            return render_template('error.html',
+                error_code=400,
+                error_message="Google login failed - Email not verified"), 400
+
     except Exception as e:
         app.logger.error(f"Callback error: {str(e)}")
         return render_template('error.html',
             error_code=400,
-            error_message="Authentication failed. Please try again."), 400
+            error_message="Authentication failed"), 400
 
 @app.route("/logout")
 @login_required
