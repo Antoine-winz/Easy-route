@@ -71,21 +71,23 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
             title = `Stop ${label}`;
         }
 
-        const marker = new google.maps.marker.AdvancedMarkerElement({
+        const marker = new google.maps.Marker({
             map,
             position: location,
             title: title,
-            content: new google.maps.marker.PinElement({
-                glyph: label.toString(),
-                background: pinColor,
-                borderColor: '#FFFFFF'
-            })
-        });
-
-        // Add tooltip
-        const tooltip = new bootstrap.Tooltip(marker.element, {
-            title: marker.title,
-            placement: 'top'
+            label: {
+                text: label.toString(),
+                color: '#FFFFFF'
+            },
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: pinColor,
+                fillOpacity: 1,
+                strokeColor: '#FFFFFF',
+                strokeWeight: 2,
+                scale: 12
+            },
+            zIndex: isStart || isEnd ? 2 : 1
         });
 
         markers.push(marker);
@@ -101,11 +103,8 @@ async function addMarker(location, label, isStart = false, isEnd = false, isLoop
 
 function clearMarkers() {
     markers.forEach(marker => {
-        if (marker) {
-            if (marker.setMap) marker.setMap(null);
-            // Cleanup any tooltips
-            const tooltip = bootstrap.Tooltip.getInstance(marker.element);
-            if (tooltip) tooltip.dispose();
+        if (marker && marker.setMap) {
+            marker.setMap(null);
         }
     });
     markers = [];
