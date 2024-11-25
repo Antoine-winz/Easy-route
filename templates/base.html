@@ -148,15 +148,8 @@
     });
     </script>
     {% block scripts %}{% endblock %}
-    <script>
-        function loadGoogleMapsScript() {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&libraries=places&loading=async&callback=initMap`;
-            script.async = true;
-            script.defer = true;
-            document.head.appendChild(script);
-        }
-        window.addEventListener('load', loadGoogleMapsScript);
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key={{ config['GOOGLE_MAPS_API_KEY'] }}&loading=async&libraries=places&callback=initMap">
     </script>
 </body>
 </html>
