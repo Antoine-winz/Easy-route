@@ -19,14 +19,12 @@ function initializeAutocomplete(input) {
         return null;
     }
 
-    // Create a datalist element for contact suggestions
-    const datalistId = `contact-suggestions-${Math.random().toString(36).substr(2, 9)}`;
-    const datalist = document.createElement('datalist');
-    datalist.id = datalistId;
-    input.parentNode.appendChild(datalist);
-    input.setAttribute('list', datalistId);
+    // Create custom dropdown container
+    const dropdownContainer = document.createElement('div');
+    dropdownContainer.className = 'contact-suggestions-dropdown';
+    input.parentNode.appendChild(dropdownContainer);
 
-    // Add input event listener for contact suggestions
+    // Update input event listener
     let debounceTimer;
     input.addEventListener('input', async (e) => {
         clearTimeout(debounceTimer);
@@ -34,11 +32,36 @@ function initializeAutocomplete(input) {
             const searchTerm = e.target.value;
             if (searchTerm.length >= 2) {
                 const suggestions = await fetchContactSuggestions(searchTerm);
-                datalist.innerHTML = suggestions
-                    .map(suggestion => `<option value="${suggestion.value}" label="${suggestion.label}">`)
-                    .join('');
+                dropdownContainer.innerHTML = suggestions.length ? suggestions
+                    .map(suggestion => `
+                        <div class="suggestion-item" data-value="${suggestion.value}">
+                            <div class="business-name">${suggestion.label.split(' - ')[0]}</div>
+                            <div class="address">${suggestion.label.split(' - ')[1]}</div>
+                        </div>
+                    `).join('') : '';
+                
+                if (suggestions.length) dropdownContainer.style.display = 'block';
+                else dropdownContainer.style.display = 'none';
+            } else {
+                dropdownContainer.style.display = 'none';
             }
         }, 300);
+    });
+
+    // Add click handler for suggestions
+    dropdownContainer.addEventListener('click', (e) => {
+        const item = e.target.closest('.suggestion-item');
+        if (item) {
+            input.value = item.dataset.value;
+            dropdownContainer.style.display = 'none';
+        }
+    });
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!dropdownContainer.contains(e.target) && e.target !== input) {
+            dropdownContainer.style.display = 'none';
+        }
     });
     
     try {
