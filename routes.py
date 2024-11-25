@@ -20,54 +20,59 @@ def get_google_provider_cfg():
 
 @app.route("/login")
 def login():
+    # Handle case where we're already logged in
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
-    # Get Google's provider configuration
-    google_provider_cfg = get_google_provider_cfg()
-    if not google_provider_cfg:
+    # Ensure required configuration is present
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        app.logger.error("Missing Google OAuth configuration")
         return render_template('error.html',
             error_code=500,
-            error_message="Failed to get Google provider configuration"), 500
+            error_message="OAuth configuration is missing"), 500
     
-    # Use the correct redirect URI format
-    redirect_uri = url_for('callback', _external=True)
-    
-    # Construct the request for Google login
-    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
-    request_uri = client.prepare_request_uri(
-        authorization_endpoint,
-        redirect_uri=redirect_uri,
-        scope=["openid", "email", "profile"],
-    )
-    return redirect(request_uri)
+    try:
+        # Get Google provider configuration
+        google_provider_cfg = get_google_provider_cfg()
+        if not google_provider_cfg:
+            raise Exception("Failed to get Google provider configuration")
+        
+        # Construct the request URI for Google login
+        authorization_endpoint = google_provider_cfg["authorization_endpoint"]
+        request_uri = client.prepare_request_uri(
+            authorization_endpoint,
+            redirect_uri=url_for('callback', _external=True, _scheme='https'),
+            scope=["openid", "email", "profile"]
+        )
+        
+        return redirect(request_uri)
+    except Exception as e:
+        app.logger.error(f"Login error: {str(e)}")
+        return render_template('error.html',
+            error_code=500,
+            error_message="Authentication system error. Please try again."), 500
 
 @app.route("/login/callback")
 def callback():
-    # Get the authorization code from Google
-    code = request.args.get("code")
-    if not code:
-        return render_template('error.html',
-            error_code=400,
-            error_message="No authorization code provided"), 400
-
-    google_provider_cfg = get_google_provider_cfg()
-    if not google_provider_cfg:
-        return render_template('error.html',
-            error_code=500,
-            error_message="Failed to get Google provider configuration"), 500
-
-    token_endpoint = google_provider_cfg["token_endpoint"]
-    
-    # Prepare and send token request
     try:
-        # Use the correct redirect URI here as well
+        # Get authorization code from Google
+        code = request.args.get("code")
+        if not code:
+            raise Exception("No authorization code received")
+
+        # Get Google provider configuration
+        google_provider_cfg = get_google_provider_cfg()
+        if not google_provider_cfg:
+            raise Exception("Failed to get Google provider configuration")
+
+        # Prepare and send token request
         token_url, headers, body = client.prepare_token_request(
-            token_endpoint,
+            google_provider_cfg["token_endpoint"],
             authorization_response=request.url,
-            redirect_url=url_for('callback', _external=True),
+            redirect_url=url_for('callback', _external=True, _scheme='https'),
             code=code
         )
+        
         token_response = requests.post(
             token_url,
             headers=headers,
@@ -75,41 +80,45 @@ def callback():
             auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
         )
 
+        # Parse the token response
         client.parse_request_body_response(json.dumps(token_response.json()))
-    except Exception as e:
-        app.logger.error(f"Token request failed: {e}")
-        return "Failed to get token from Google", 500
 
-    # Get user info from Google
-    userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
-    uri, headers, body = client.add_token(userinfo_endpoint)
-    userinfo_response = requests.get(uri, headers=headers, data=body)
-    
-    if userinfo_response.json().get("email_verified"):
-        google_id = userinfo_response.json()["sub"]
-        email = userinfo_response.json()["email"]
-        name = userinfo_response.json().get("name", email.split('@')[0])
-        picture = userinfo_response.json().get("picture")
+        # Get user info from Google
+        userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
+        uri, headers, body = client.add_token(userinfo_endpoint)
+        userinfo_response = requests.get(uri, headers=headers, data=body)
         
-        # Find or create user
-        user = User.query.filter_by(google_id=google_id).first()
-        if not user:
-            user = User(
-                google_id=google_id,
-                email=email,
-                name=name,
-                profile_pic=picture
-            )
-            db.session.add(user)
-            db.session.commit()
+        if userinfo_response.json().get("email_verified"):
+            # Extract user info
+            google_id = userinfo_response.json()["sub"]
+            email = userinfo_response.json()["email"]
+            name = userinfo_response.json().get("name", email.split('@')[0])
+            picture = userinfo_response.json().get("picture")
+            
+            # Find or create user
+            user = User.query.filter_by(google_id=google_id).first()
+            if not user:
+                user = User(
+                    google_id=google_id,
+                    email=email,
+                    name=name,
+                    profile_pic=picture
+                )
+                db.session.add(user)
+                db.session.commit()
+            
+            # Begin user session
+            login_user(user)
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('index'))
+            
+        raise Exception("Email not verified by Google")
         
-        # Begin user session
-        login_user(user)
-        return redirect(url_for('index'))
-    else:
+    except Exception as e:
+        app.logger.error(f"Callback error: {str(e)}")
         return render_template('error.html',
             error_code=400,
-            error_message="Email not verified by Google. Please verify your email first."), 400
+            error_message="Authentication failed. Please try again."), 400
 
 @app.route("/logout")
 @login_required
